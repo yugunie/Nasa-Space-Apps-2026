@@ -1,0 +1,6 @@
+{
+  "name": "Cosmic Chronicles - 3D Celestial Storybook",
+  "description": "An immersive 3D interactive space storybook crafted with Three.js and GSAP, featuring ambient celestial audio, fluid page turns, interactive cosmic illustrations, and holographic storylines.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
