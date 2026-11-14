@@ -50,7 +50,7 @@ export function StoryHUD({
       {/* Top Bar: Clean 3-zone header, high contrast, unboxed metadata */}
       <header className="pointer-events-auto flex items-center justify-between gap-4 sm:gap-8 rounded-xl bg-[#070914]/92 border border-[#D5AC55]/25 px-4 py-2.5 shadow-lg">
         <a
-          href="/homepage-preview.html"
+          href="/index.html"
           className="shrink-0 rounded-lg border border-[#D5AC55]/40 bg-white/10 px-2.5 py-2 text-xs sm:text-sm font-bold text-[#E8C574] hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-[#E8C574]"
           aria-label="Return to Echoes Beyond Earth library"
         >
