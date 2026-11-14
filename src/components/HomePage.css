@@ -59,7 +59,12 @@
 .sa-book-slot.is-centered { filter: brightness(1.05); opacity: 1; }
 .sa-book-slot:hover { filter: brightness(1.17); }
 .sa-book-slot.is-centered:hover { transform: translate(calc(-50% + var(--shift)), calc(var(--lift) - 9px)) rotateY(var(--yaw)) scale(var(--scale)); }
-.sa-book { position: relative; display: flex; flex-direction: column; align-items: center; width: 100%; height: 100%; overflow: hidden; padding: 17px 18px 20px 26px; border: 2px solid #d9b876; border-radius: 4px 12px 13px 4px; box-shadow: inset 0 0 0 5px rgba(7,9,29,.6), inset 0 0 0 6px rgba(253,214,151,.6), 7px 8px 0 -2px #9b8b86, 12px 13px 0 -3px #38283b, 17px 22px 35px rgba(0,0,0,.55); }
+.sa-book-slot.is-zooming { z-index: 20 !important; pointer-events: none; animation: sa-archive-book-zoom .7s cubic-bezier(.2,.8,.3,1) forwards; }
+@keyframes sa-archive-book-zoom { from { transform: translate(-50%,0) scale(1); } to { transform: translate(-50%,0) scale(3.6); } }
+.sa-archive-transition { position: fixed; z-index: 9999; inset: 0; pointer-events: none; background: #000; animation: sa-archive-fade-black .7s ease forwards; }
+@keyframes sa-archive-fade-black { from { opacity: 0; } to { opacity: 1; } }
+.sa-book { position: relative; display: flex; flex-direction: column; align-items: center; width: 100%; height: 100%; overflow: hidden; padding: 17px 18px 20px 26px; border: 2px solid #d9b876; border-radius: 4px 12px 13px 4px; box-shadow: inset 0 0 0 5px rgba(7,9,29,.6), inset 0 0 0 6px rgba(253,214,151,.6), 7px 8px 0 -2px #9b8b86, 12px 13px 0 -3px #38283b, 17px 22px 35px rgba(0,0,0,.55); animation: sa-book-drop-in .55s cubic-bezier(.16,1,.3,1) both; }
+@keyframes sa-book-drop-in { from { opacity: 0; transform: translateY(-24px); } to { opacity: 1; transform: translateY(0); } }
 .sa-book::before { content: ""; position: absolute; inset: 8px; border: 1px solid rgba(244,206,131,.34); border-radius: 2px 9px 9px 2px; pointer-events: none; }
 .sa-book::after { content: ""; position: absolute; inset: 0; background: linear-gradient(95deg, rgba(255,255,255,.12),transparent 25%,transparent 68%,rgba(6,9,35,.25)), radial-gradient(ellipse at center 54%,transparent 33%,rgba(0,0,0,.3)); pointer-events: none; }
 .sa-book--moon { background: linear-gradient(160deg,#172d60 5%,#35669c 49%,#121c48 92%); }

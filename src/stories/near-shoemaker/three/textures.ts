@@ -247,8 +247,7 @@ export function createBackCoverTexture(maxAnisotropy = 4): THREE.CanvasTexture {
 }
 
 /**
- * Creates calm, matte neutral grey spread textures (one tone lighter than dark slate,
- * zero cyan/neon, zero white glare) so 3D animations and 90-degree text stand out crisply.
+ * Creates a subdued starfield spread texture so 3D animations and pop-up text stay legible.
  */
 export function createSpreadPageTexture(
   side: 'left' | 'right',
@@ -260,17 +259,66 @@ export function createSpreadPageTexture(
   canvas.height = 1280;
   const ctx = canvas.getContext('2d')!;
 
-  // Calm, matte neutral grey (one tone lighter, zero cyan/neon)
+  // Deep indigo space with restrained nebula color behind the story content
   const bg = ctx.createLinearGradient(0, 0, 1024, 1280);
-  bg.addColorStop(0, '#585E6C');
-  bg.addColorStop(1, '#4B505E');
+  bg.addColorStop(0, '#121B37');
+  bg.addColorStop(0.55, '#0B1228');
+  bg.addColorStop(1, '#080D1D');
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, 1024, 1280);
 
-  // Subtle matte paper grain
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.015)';
-  for (let i = 0; i < 1280; i += 8) {
-    ctx.fillRect(0, i, 1024, 2);
+  const nebulae = [
+    { x: 220, y: 270, radius: 360, color: 'rgba(75, 120, 225, 0.2)' },
+    { x: 810, y: 720, radius: 430, color: 'rgba(133, 76, 195, 0.17)' },
+    { x: 420, y: 1120, radius: 330, color: 'rgba(50, 142, 175, 0.13)' },
+  ];
+  for (const nebula of nebulae) {
+    const glow = ctx.createRadialGradient(
+      nebula.x,
+      nebula.y,
+      0,
+      nebula.x,
+      nebula.y,
+      nebula.radius,
+    );
+    glow.addColorStop(0, nebula.color);
+    glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  // Seed the star positions by spread so revisiting a page keeps its artwork stable.
+  let seed = ((page.index + 1) * 1103515245 + (side === 'left' ? 12345 : 67890)) >>> 0;
+  const random = () => {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    return seed / 0x100000000;
+  };
+  for (let i = 0; i < 150; i++) {
+    const x = 56 + random() * 912;
+    const y = 56 + random() * 1168;
+    const radius = 0.5 + random() * 1.3;
+    const opacity = 0.2 + random() * 0.55;
+
+    ctx.fillStyle = `rgba(220, 232, 255, ${opacity})`;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (random() > 0.93) {
+      const flare = radius * 3.2;
+      ctx.fillStyle = `rgba(235, 243, 255, ${opacity * 0.75})`;
+      ctx.beginPath();
+      ctx.moveTo(x, y - flare);
+      ctx.lineTo(x + flare * 0.28, y - flare * 0.28);
+      ctx.lineTo(x + flare, y);
+      ctx.lineTo(x + flare * 0.28, y + flare * 0.28);
+      ctx.lineTo(x, y + flare);
+      ctx.lineTo(x - flare * 0.28, y + flare * 0.28);
+      ctx.lineTo(x - flare, y);
+      ctx.lineTo(x - flare * 0.28, y - flare * 0.28);
+      ctx.closePath();
+      ctx.fill();
+    }
   }
 
   // Inner crease shading toward the spine

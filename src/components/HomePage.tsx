@@ -349,10 +349,13 @@ const REGION_LABEL: Record<Region, string> = {
   beyond: "DEEP SPACE ARCHIVE",
 };
 
+const ARCHIVE_OPENING_DURATION_MS = 700;
+
 export default function HomePage() {
   const [filter, setFilter] = useState<Filter>("all");
   const [activeId, setActiveId] = useState(ARCHIVES[0].id);
   const [reading, setReading] = useState(false);
+  const [openingArchiveId, setOpeningArchiveId] = useState<string | null>(null);
 
   const visible = useMemo(
     () => ARCHIVES.filter((book) => filter === "all" || book.region === filter),
@@ -362,17 +365,33 @@ export default function HomePage() {
   const activeBook = visible[activeIndex];
 
   const go = (step: number) => {
+    if (openingArchiveId) return;
     const next = (activeIndex + step + visible.length) % visible.length;
     setActiveId(visible[next].id);
   };
 
   // Only Book 5 has a connected 3D story so far. Other books keep their original popup.
   const openArchive = (id: string) => {
-    if (id === "near-shoemaker") {
-      window.location.assign("/near-shoemaker.html");
+    if (openingArchiveId) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      if (id === "near-shoemaker") {
+        window.location.assign("/near-shoemaker.html");
+      } else {
+        setReading(true);
+      }
       return;
     }
-    setReading(true);
+
+    setOpeningArchiveId(id);
+    window.setTimeout(() => {
+      if (id === "near-shoemaker") {
+        window.location.assign("/near-shoemaker.html");
+        return;
+      }
+
+      setOpeningArchiveId(null);
+      setReading(true);
+    }, ARCHIVE_OPENING_DURATION_MS);
   };
 
   const changeFilter = (next: Filter) => {
@@ -384,7 +403,7 @@ export default function HomePage() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setReading(false);
-      if (reading) return;
+      if (reading || openingArchiveId) return;
       if (event.key === "ArrowLeft") {
         event.preventDefault();
         go(-1);
@@ -396,7 +415,7 @@ export default function HomePage() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [reading, activeIndex, visible]);
+  }, [reading, openingArchiveId, activeIndex, visible]);
 
   useEffect(() => {
     if (!reading) return;
@@ -409,6 +428,7 @@ export default function HomePage() {
     <div className="sa-home">
       <div className="sa-sky" aria-hidden="true" />
       <div className="sa-stars" aria-hidden="true" />
+      {openingArchiveId && <div className="sa-archive-transition" aria-hidden="true" />}
 
       <header className="sa-header">
         <div className="sa-brand" aria-label="Echoes Beyond Earth">
@@ -434,6 +454,7 @@ export default function HomePage() {
               type="button"
               aria-pressed={filter === item.id}
               onClick={() => changeFilter(item.id)}
+              disabled={Boolean(openingArchiveId)}
             >
               <span className="sa-filter-symbol">{item.symbol}</span> {item.label}
             </button>
@@ -443,7 +464,7 @@ export default function HomePage() {
         <section className="sa-carousel-section" aria-label="Mission book carousel">
           <div className="sa-carousel-topline"><span>✧</span> SELECT AN ARCHIVE <span>✧</span></div>
           <div className="sa-carousel">
-            <button className="sa-carousel-arrow sa-carousel-arrow--left" type="button" onClick={() => go(-1)} aria-label="Previous book">‹</button>
+            <button className="sa-carousel-arrow sa-carousel-arrow--left" type="button" onClick={() => go(-1)} aria-label="Previous book" disabled={Boolean(openingArchiveId)}>‹</button>
 
             <div className="sa-books-stage">
               <div className="sa-orbit sa-orbit--one" aria-hidden="true" />
@@ -468,9 +489,10 @@ export default function HomePage() {
                   <button
                     key={book.id}
                     type="button"
-                    className={`sa-book-slot ${centered ? "is-centered" : ""}`}
+                    className={`sa-book-slot ${centered ? "is-centered" : ""} ${openingArchiveId === book.id ? "is-zooming" : ""}`}
                     style={style}
                     onClick={() => centered ? openArchive(book.id) : setActiveId(book.id)}
+                    disabled={Boolean(openingArchiveId)}
                     aria-label={`${centered ? "Read" : "Select"} ${book.name}`}
                     aria-pressed={centered}
                   >
@@ -495,7 +517,7 @@ export default function HomePage() {
                 );
               })}
             </div>
-            <button className="sa-carousel-arrow sa-carousel-arrow--right" type="button" onClick={() => go(1)} aria-label="Next book">›</button>
+            <button className="sa-carousel-arrow sa-carousel-arrow--right" type="button" onClick={() => go(1)} aria-label="Next book" disabled={Boolean(openingArchiveId)}>›</button>
           </div>
 
           <div className="sa-index" aria-label="Book position">
@@ -513,7 +535,7 @@ export default function HomePage() {
             <h2>{activeBook.name}</h2>
             <p>{activeBook.summary}</p>
           </div>
-          <button className="sa-read-button" type="button" onClick={() => openArchive(activeBook.id)}>
+          <button className="sa-read-button" type="button" onClick={() => openArchive(activeBook.id)} disabled={Boolean(openingArchiveId)}>
             <span>▤</span> Open this book <span>→</span>
           </button>
         </section>

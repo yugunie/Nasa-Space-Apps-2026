@@ -11,8 +11,14 @@ export default function App() {
   const [dockCollapsed, setDockCollapsed] = useState(false);
   const [actionPulseId, setActionPulseId] = useState(0);
   const [resetViewId, setResetViewId] = useState(0);
+  const [isEntering, setIsEntering] = useState(true);
 
   const currentPage = STORY_PAGES[pageIndex] ?? STORY_PAGES[0];
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setIsEntering(false));
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   const goToPage = useCallback((nextIdx: number) => {
     const clamped = Math.max(0, Math.min(STORY_PAGES.length - 1, nextIdx));
@@ -44,6 +50,10 @@ export default function App() {
 
   const handleOpenBook = useCallback(() => {
     goToPage(1);
+  }, [goToPage]);
+
+  const handleCloseBook = useCallback(() => {
+    goToPage(0);
   }, [goToPage]);
 
   const handleTriggerAction = useCallback(() => {
@@ -101,11 +111,20 @@ export default function App() {
 
   return (
     <main className="relative w-screen h-screen overflow-hidden bg-[#06091a]">
+      <div
+        aria-hidden="true"
+        className={`pointer-events-none fixed inset-0 z-[100] bg-black transition-opacity duration-700 ease-out motion-reduce:transition-none ${
+          isEntering ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
       <SpaceBookStage
         pageIndex={pageIndex}
         actionPulseId={actionPulseId}
         resetViewId={resetViewId}
         onOpenBook={handleOpenBook}
+        onCloseBook={handleCloseBook}
+        onPrevPage={handlePrev}
+        onNextPage={handleNext}
         onInteractScene={handleInteractScene}
       />
 
