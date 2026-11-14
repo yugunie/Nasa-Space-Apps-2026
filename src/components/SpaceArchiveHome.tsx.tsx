@@ -19,133 +19,61 @@ type Archive = {
   legacy: string;
 };
 
-// Adapted from the team's mission-device list. Each entry becomes one book.
+// The five featured NASA archives, in the team's chosen order.
 const ARCHIVES: Archive[] = [
   {
-    id: "apollo-modules", name: "Apollo Lunar Modules", region: "moon",
-    kind: "Lunar landing craft", location: "The Moon", era: "Apollo programme",
-    emblem: "◈", accent: "#7fcfff",
-    summary: "The descent stages of Apollo's lunar modules remained on the Moon after astronauts departed.",
-    story: "Apollo astronauts travelled to the lunar surface in Lunar Modules, including Apollo 11's Eagle. The ascent stages carried the crews away, but the descent stages stayed behind. They had also served as platforms for those departures.",
-    legacy: "These remaining stages mark the places where people explored another world.",
-  },
-  {
-    id: "sojourner", name: "Sojourner Rover", region: "mars",
-    kind: "Robotic rover", location: "Mars", era: "1997",
-    emblem: "✧", accent: "#ffb377",
-    summary: "The first rover on Mars, delivered by the Pathfinder lander in 1997.",
-    story: "Sojourner travelled to Mars aboard the Pathfinder mission in 1997. This small robotic rover became the first rover to operate on the Martian surface. It is now permanently parked on Mars.",
-    legacy: "Sojourner helped open the era of robotic surface exploration on Mars.",
-  },
-  {
-    id: "lrv", name: "Lunar Roving Vehicles", region: "moon",
-    kind: "Electric moon buggies", location: "The Moon", era: "Apollo programme",
-    emblem: "✦", accent: "#b4d5ff",
-    summary: "Three electric Moon buggies drove astronauts across the lunar surface and remain parked there.",
-    story: "Astronauts used Lunar Roving Vehicles to travel farther across the Moon. Three of these electric vehicles were left on the lunar surface when their crews returned home.",
-    legacy: "The rovers are reminders of how people extended the reach of lunar exploration.",
-  },
-  {
-    id: "spirit-opportunity", name: "Spirit & Opportunity", region: "mars",
-    kind: "Twin robotic rovers", location: "Mars", era: "Mars exploration",
-    emblem: "✶", accent: "#ff9a87",
-    summary: "Twin rovers that explored Mars for years before becoming inactive monuments.",
-    story: "Spirit and Opportunity were twin robotic rovers. Both operated on Mars for years, exploring their surroundings and sending discoveries home. They are no longer active.",
-    legacy: "Their journeys show how much science long-lived robotic explorers can accomplish.",
-  },
-  {
-    id: "alsep", name: "ALSEP Scientific Packages", region: "moon",
-    kind: "Scientific instruments", location: "The Moon", era: "Apollo programme",
-    emblem: "✺", accent: "#92c6ff",
-    summary: "Scientific packages, including seismometers and retroreflectors, left to study the Moon.",
-    story: "The Apollo Lunar Surface Experiments Packages included instruments such as seismometers and retroreflectors. Astronauts deployed them on the lunar surface so science could continue after the crews departed.",
-    legacy: "They transformed brief human visits into longer-lasting scientific investigations.",
-  },
-  {
-    id: "viking", name: "Viking 1 & 2 Landers", region: "mars",
-    kind: "Robotic landers", location: "Mars", era: "1976",
-    emblem: "✥", accent: "#ffc18d",
-    summary: "The first U.S. landers to operate successfully on Mars, in 1976.",
-    story: "Viking 1 and Viking 2 successfully operated on Mars in 1976. The landers remain at the places where they touched down, silent reminders of an early milestone in Martian exploration.",
-    legacy: "Their successful landings helped establish Mars as a destination for robotic science.",
-  },
-  {
-    id: "surveyor", name: "Surveyor Landers", region: "moon",
-    kind: "Robotic lunar probes", location: "The Moon", era: "1960s",
+    id: "surveyor-3", name: "Surveyor 3", region: "moon",
+    kind: "Robotic lunar lander", location: "Ocean of Storms, the Moon", era: "1967–1969",
     emblem: "◇", accent: "#70d8ff",
-    summary: "Robotic lunar probes from the 1960s that demonstrated soft landings were possible.",
-    story: "Before the Apollo lunar landings, Surveyor probes were sent to the Moon. Their mission helped show that spacecraft could make controlled, soft landings on the lunar surface.",
-    legacy: "These robotic pioneers helped prepare the way for later lunar exploration.",
+    summary: "A robot landed on the Moon in 1967. Two years later, Apollo 12 astronauts came to visit it.",
+    story: "Surveyor 3 landed on the Moon in 1967, examining the ground and showing that the lunar soil could support a spacecraft. In 1969, Apollo 12 astronauts Pete Conrad and Alan Bean landed nearby, walked to the silent probe, and collected its camera and other parts to bring back to Earth.",
+    legacy: "For the first time, human explorers visited a robot from an earlier lunar mission. Studying its returned parts revealed how equipment endured years on the Moon.",
   },
   {
-    id: "phoenix-insight", name: "Phoenix & InSight", region: "mars",
-    kind: "Science landers", location: "Mars", era: "Mars exploration",
-    emblem: "✳", accent: "#ffad9e",
-    summary: "Phoenix investigated water ice; InSight listened for marsquakes. Both eventually lost power.",
-    story: "Phoenix examined water ice on Mars. InSight turned its attention inward, listening for marsquakes. Both landers eventually lost power after carrying out their scientific work.",
-    legacy: "Their different instruments reveal that a planet can be explored both on its surface and below it.",
+    id: "alsep", name: "ALSEP", region: "moon",
+    kind: "Lunar science instruments", location: "Apollo landing sites, the Moon", era: "1969–1977",
+    emblem: "✺", accent: "#92c6ff",
+    summary: "The astronauts went home, but their scientific instruments stayed to listen to the Moon.",
+    story: "Apollo astronauts set up ALSEP, the Apollo Lunar Surface Experiments Package, during missions 12 and 14 through 17. These instruments measured moonquakes and other conditions on the lunar surface, sending valuable information to Earth long after the astronauts departed. The experiment network operated until September 1977.",
+    legacy: "ALSEP turned brief visits into years of discoveries. The equipment left behind is a reminder that exploration can continue even after the explorers return home.",
+  },
+  {
+    id: "opportunity", name: "Opportunity Rover", region: "mars",
+    kind: "Six-wheeled Mars rover", location: "Meridiani Planum, Mars", era: "2004–2018",
+    emblem: "✶", accent: "#ff9a87",
+    summary: "Built for a 90-day mission, Opportunity survived almost 15 years on the harsh surface of Mars.",
+    story: "Opportunity landed on Mars in January 2004 with a mission planned to last just 90 Martian days. The rover kept exploring for nearly 15 Earth years, finding strong evidence that liquid water once existed on Mars. A massive dust storm in 2018 blocked sunlight from its solar panels, and the rover sent its final signal that June.",
+    legacy: "Opportunity proved how far a determined little robot could go, greatly expanding our understanding of ancient water on Mars.",
   },
   {
     id: "ingenuity", name: "Ingenuity Helicopter", region: "mars",
-    kind: "Robotic helicopter", location: "Mars", era: "Mars exploration",
+    kind: "Robotic Mars helicopter", location: "Jezero Crater, Mars", era: "2021–2024",
     emblem: "✴", accent: "#ff8e75",
-    summary: "The first aircraft to make powered flights on another planet; now a stationary artifact.",
-    story: "Ingenuity became the first aircraft to achieve powered flight on another planet. After sustaining rotor damage, it could no longer fly and became a stationary artifact on Mars.",
-    legacy: "Its flight experiments demonstrated a new way to explore distant worlds.",
+    summary: "A tiny helicopter made the first powered, controlled flight on another planet.",
+    story: "Ingenuity arrived on Mars tucked beneath the Perseverance rover. On April 19, 2021, it lifted off in the thin Martian atmosphere and made history. Designed for up to five test flights, it completed 72. Rotor damage ended its flying career in January 2024, leaving it on the Martian surface.",
+    legacy: "Ingenuity showed that future explorers may be able to scout unfamiliar worlds from the air, opening a new chapter in planetary exploration.",
   },
   {
-    id: "dawn", name: "Dawn Spacecraft", region: "beyond",
-    kind: "Asteroid-belt explorer", location: "Orbit around Ceres", era: "Vesta & Ceres",
-    emblem: "✵", accent: "#d9baff",
-    summary: "Mapped Vesta and Ceres before running out of fuel; now in an unpowered orbit around Ceres.",
-    story: "Dawn travelled to the asteroid belt to map Vesta and Ceres. When its fuel ran out, the mission ended. The spacecraft remains in orbit around Ceres without power for further manoeuvres.",
-    legacy: "Its journey connected the stories of two remarkable bodies in the asteroid belt.",
-  },
-  {
-    id: "near", name: "NEAR Shoemaker", region: "beyond",
-    kind: "Asteroid spacecraft", location: "Asteroid 433 Eros", era: "Asteroid exploration",
+    id: "near-shoemaker", name: "NEAR Shoemaker", region: "beyond",
+    kind: "Asteroid orbiter", location: "Asteroid 433 Eros", era: "2000–2001",
     emblem: "✷", accent: "#d6a7f0",
-    summary: "The first spacecraft to orbit and land on an asteroid, now resting on 433 Eros.",
-    story: "NEAR Shoemaker explored the asteroid 433 Eros, becoming the first spacecraft to orbit and then land on an asteroid. It rests on the asteroid's surface.",
-    legacy: "It showed that small bodies in the solar system could be visited up close.",
-  },
-  {
-    id: "pioneer", name: "Pioneer 10 & 11", region: "beyond",
-    kind: "Deep-space probes", location: "Outbound deep space", era: "Outer planets",
-    emblem: "✹", accent: "#bfaaff",
-    summary: "Early probes that explored the outer planets and are now drifting away from the solar system.",
-    story: "Pioneer 10 and Pioneer 11 were early deep-space probes that travelled outward to explore the outer planets. Their active work is over, but their spacecraft continue their journeys into distant space.",
-    legacy: "They stand for humanity's earliest steps toward the distant reaches of the solar system.",
-  },
-  {
-    id: "kepler", name: "Kepler Space Telescope", region: "beyond",
-    kind: "Exoplanet telescope", location: "Earth-trailing solar orbit", era: "Exoplanet search",
-    emblem: "✧", accent: "#e1c4ff",
-    summary: "An exoplanet-hunting telescope that ran out of fuel and now drifts in an Earth-trailing orbit.",
-    story: "Kepler searched for planets around stars beyond our solar system. After running out of fuel, it could no longer continue its mission and was left drifting in an orbit that trails Earth around the Sun.",
-    legacy: "Its work changed how we think about planets in the wider universe.",
+    summary: "A spacecraft built to orbit an asteroid surprised everyone by safely landing on it.",
+    story: "NEAR Shoemaker became the first spacecraft to orbit an asteroid when it reached Eros in 2000. On February 12, 2001, the mission team guided it down toward the surface. Although the spacecraft was not designed as a lander, it survived touchdown and continued sending back scientific data for about two weeks.",
+    legacy: "An unexpected landing became a remarkable achievement, demonstrating that even a spacecraft without landing gear could explore an asteroid up close.",
   },
 ];
 
 /*
- * Original, locally rendered spacecraft illustrations for the 13 book covers.
+ * Original, locally rendered spacecraft illustrations retained for the five featured books.
  * These are intentionally storybook-style silhouettes, not NASA photographs
  * or precise engineering diagrams. No extra libraries or image URLs needed.
  */
 const COVER_DETAILS: Record<string, { subtitle: string; volume: string }> = {
-  "apollo-modules": { subtitle: "The silent lunar guardian", volume: "01" },
-  "sojourner": { subtitle: "A tiny wanderer on Mars", volume: "02" },
-  "lrv": { subtitle: "Wheels across the Moon", volume: "03" },
-  "spirit-opportunity": { subtitle: "The restless twin explorers", volume: "04" },
-  "alsep": { subtitle: "Listening to the Moon", volume: "05" },
-  "viking": { subtitle: "The first Martian outposts", volume: "06" },
-  "surveyor": { subtitle: "Before the first footsteps", volume: "07" },
-  "phoenix-insight": { subtitle: "The secrets beneath the dust", volume: "08" },
-  "ingenuity": { subtitle: "The first wings on Mars", volume: "09" },
-  "dawn": { subtitle: "Between Vesta and Ceres", volume: "10" },
-  "near": { subtitle: "A visitor to asteroid Eros", volume: "11" },
-  "pioneer": { subtitle: "Messages to the stars", volume: "12" },
-  "kepler": { subtitle: "The hunter of distant worlds", volume: "13" },
+  "surveyor-3": { subtitle: "Two generations, one Moon", volume: "01" },
+  "alsep": { subtitle: "The Moon's silent scientists", volume: "02" },
+  "opportunity": { subtitle: "The rover that refused to quit", volume: "03" },
+  "ingenuity": { subtitle: "The little helicopter that could", volume: "04" },
+  "near-shoemaker": { subtitle: "The landing that wasn't planned", volume: "05" },
 };
 
 function SolarPanel({ x, y, w, h, rotation = 0 }: {
@@ -236,7 +164,7 @@ function DeviceIllustration({ id, region }: { id: string; region: Region }) {
         <rect x="29" y="119" width="36" height="20" rx="4" fill="#f5ebd5" stroke="#c3b28b" strokeWidth="2" />
       </g>;
       break;
-    case "surveyor":
+    case "surveyor-3":
       machine = <g>
         <path d="M115 100 L60 156 M127 102 L189 154 M120 100 L120 155" stroke="#eef0e6" strokeWidth="4" />
         <path d="M48 157 H74 M175 155 H202 M104 156 H136" stroke={gold} strokeWidth="4" strokeLinecap="round" />
@@ -263,7 +191,7 @@ function DeviceIllustration({ id, region }: { id: string; region: Region }) {
         <path d="M80 130 L74 141 M103 127 L104 141 M148 129 L157 142" stroke="#c1cad3" strokeWidth="2" />
       </g>;
       break;
-    case "spirit-opportunity":
+    case "opportunity":
       machine = <g>
         {[65, 97, 148, 182].map((x) => <Wheel key={x} x={x} y={149} r={11} />)}
         <path d="M58 135 L90 119 L166 119 L188 136 H58" fill="#c7c8bd" stroke="#fff0d0" strokeWidth="3" />
@@ -327,7 +255,7 @@ function DeviceIllustration({ id, region }: { id: string; region: Region }) {
         <path d="M118 117 V140 M119 138 L128 146" stroke={metal} strokeWidth="2" />
       </g>;
       break;
-    case "near":
+    case "near-shoemaker":
       machine = <g>
         <path d="M14 150 Q39 105 76 139 Q112 157 99 170 H22 Z" fill="#827385" stroke="#e4c2af" strokeWidth="2" />
         <circle cx="49" cy="148" r="9" fill="#4d496b" /><circle cx="80" cy="154" r="5" fill="#49445e" />
@@ -486,7 +414,7 @@ export default function HomePage() {
         <div className="sa-hero">
           <div className="sa-eyebrow"><span>✦</span> THE CELESTIAL LIBRARY <span>✦</span></div>
           <h1>Stories written <em>among the stars</em></h1>
-          <p>Thirteen forgotten explorers. Countless discoveries. Choose a book and uncover the machines humanity left beyond Earth.</p>
+          <p>Five extraordinary explorers. Countless discoveries. Choose a book and uncover the machines humanity left beyond Earth.</p>
         </div>
 
         <div className="sa-filters" role="group" aria-label="Choose a destination">

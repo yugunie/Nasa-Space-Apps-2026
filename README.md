@@ -18,3 +18,16 @@ View your app in AI Studio: https://ai.studio/apps/5cce8ee2-a5c7-46ae-bea9-973bf
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+
+- An interactive homepage 
+(developed using React, TypeScript and CSS.)
+
+- A cinematic space theme and animated book carousel 
+
+- Five NASA mission books were included.
+
+- ChatGPT was used for code generation and debugging.
+
+- VS Code and GitHub were used for development and collaboration.
+
+- The homepage was prepared for future 3D story integration.
