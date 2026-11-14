@@ -24,6 +24,9 @@ export interface SpaceBookStageProps {
   actionPulseId: number;
   resetViewId: number;
   onOpenBook: () => void;
+  onCloseBook: () => void;
+  onPrevPage: () => void;
+  onNextPage: () => void;
   onInteractScene: () => void;
 }
 
@@ -32,6 +35,9 @@ export function SpaceBookStage({
   actionPulseId,
   resetViewId,
   onOpenBook,
+  onCloseBook,
+  onPrevPage,
+  onNextPage,
   onInteractScene,
 }: SpaceBookStageProps) {
   const mountRef = useRef<HTMLDivElement | null>(null);
@@ -40,6 +46,9 @@ export function SpaceBookStage({
   // Refs so React prop changes never recreate the WebGL canvas
   const desiredPageRef = useRef(pageIndex);
   const onOpenBookRef = useRef(onOpenBook);
+  const onCloseBookRef = useRef(onCloseBook);
+  const onPrevPageRef = useRef(onPrevPage);
+  const onNextPageRef = useRef(onNextPage);
   const onInteractSceneRef = useRef(onInteractScene);
   const actionBoostRef = useRef(0);
   const camResetActiveRef = useRef(false);
@@ -51,6 +60,18 @@ export function SpaceBookStage({
   useEffect(() => {
     onOpenBookRef.current = onOpenBook;
   }, [onOpenBook]);
+
+  useEffect(() => {
+    onCloseBookRef.current = onCloseBook;
+  }, [onCloseBook]);
+
+  useEffect(() => {
+    onPrevPageRef.current = onPrevPage;
+  }, [onPrevPage]);
+
+  useEffect(() => {
+    onNextPageRef.current = onNextPage;
+  }, [onNextPage]);
 
   useEffect(() => {
     onInteractSceneRef.current = onInteractScene;
@@ -402,7 +423,7 @@ export function SpaceBookStage({
       renderer.compile(scene, camera);
     }
 
-    // 7. Interactive Click / Tap Raycasting (Cover to Open, Diorama to Play Action)
+    // 7. Interactive Click / Tap Raycasting (Open/Close, Flip Pages, Scene Actions)
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
     let downX = 0;
@@ -417,6 +438,7 @@ export function SpaceBookStage({
       const dx = e.clientX - downX;
       const dy = e.clientY - downY;
       if (dx * dx + dy * dy > 36) return; // Ignore orbit drags
+      if (pendingPageIdx !== null || desiredPageRef.current !== activePageIdx) return;
 
       const rect = renderer.domElement.getBoundingClientRect();
       pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -428,12 +450,34 @@ export function SpaceBookStage({
         if (hits.length > 0) {
           onOpenBookRef.current();
         }
-      } else if (activeDiorama) {
-        const hits = raycaster.intersectObject(dioramaAnchor, true);
-        if (hits.length > 0) {
-          actionBoostRef.current = 1.0;
-          soundEngine.playInteractionPop();
-          onInteractSceneRef.current();
+        return;
+      }
+
+      const sceneHits = activeDiorama
+        ? raycaster.intersectObject(dioramaAnchor, true)
+        : [];
+      if (sceneHits.length > 0) {
+        actionBoostRef.current = 1.0;
+        soundEngine.playInteractionPop();
+        onInteractSceneRef.current();
+        return;
+      }
+
+      const pageHit = raycaster.intersectObjects(
+        [bookRig.leftPageMesh, bookRig.rightPageMesh],
+        false,
+      )[0];
+      if (pageHit?.object === bookRig.leftPageMesh) {
+        if (activePageIdx === 1) {
+          onCloseBookRef.current();
+        } else {
+          onPrevPageRef.current();
+        }
+      } else if (pageHit?.object === bookRig.rightPageMesh) {
+        if (activePageIdx === STORY_PAGES.length - 1) {
+          onCloseBookRef.current();
+        } else {
+          onNextPageRef.current();
         }
       }
     };
@@ -453,8 +497,11 @@ export function SpaceBookStage({
       pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
       raycaster.setFromCamera(pointer, camera);
 
-      const target = activePageIdx === 0 ? bookRig.frontCoverPivot : dioramaAnchor;
-      const hits = raycaster.intersectObject(target, true);
+      const targets =
+        activePageIdx === 0
+          ? [bookRig.frontCoverPivot]
+          : [dioramaAnchor, bookRig.leftPageMesh, bookRig.rightPageMesh];
+      const hits = raycaster.intersectObjects(targets, true);
       renderer.domElement.style.cursor = hits.length > 0 ? 'pointer' : 'grab';
     };
     renderer.domElement.addEventListener('pointermove', onPointerMove);
@@ -508,8 +555,16 @@ export function SpaceBookStage({
           camResetActiveRef.current = true;
         } else {
           // Flipping between open pages!
-          pendingPageIdx = desired;
           flipDirection = desired > activePageIdx ? 1 : -1;
+          const currentPage = STORY_PAGES[activePageIdx] ?? STORY_PAGES[0];
+          bookRig.setFlippingPageTexture(
+            createSpreadPageTexture(
+              flipDirection === 1 ? 'right' : 'left',
+              currentPage,
+              maxAnisotropy,
+            ),
+          );
+          pendingPageIdx = desired;
           flipProgress = 0;
           bookRig.flippingPageGroup.visible = true;
         }
@@ -529,6 +584,7 @@ export function SpaceBookStage({
         if (flipProgress >= 1) {
           pendingPageIdx = null;
           bookRig.flippingPageGroup.visible = false;
+          bookRig.setFlippingPageTexture(null);
         }
       }
 
@@ -638,6 +694,7 @@ export function SpaceBookStage({
       renderer.domElement.removeEventListener('webglcontextrestored', handleContextRestored);
 
       if (activeDiorama) activeDiorama.dispose();
+      bookRig.setFlippingPageTexture(null);
       envTex.dispose();
       glowTex.dispose();
       bgAsteroidTex.dispose();

@@ -10,8 +10,7 @@ View your app in AI Studio: https://ai.studio/apps/5cce8ee2-a5c7-46ae-bea9-973bf
 
 ## Run Locally
 
-**Prerequisites:**  Node.js
-
+**Prerequisites:** Node.js
 
 1. Install dependencies:
    `npm install`
@@ -19,14 +18,14 @@ View your app in AI Studio: https://ai.studio/apps/5cce8ee2-a5c7-46ae-bea9-973bf
 3. Run the app:
    `npm run dev`
 
-- An interactive homepage 
-(developed using React, TypeScript and CSS.)
+- An interactive homepage
+  (developed using React, TypeScript and CSS.)
 
-- A cinematic space theme and animated book carousel 
+- A cinematic space theme and animated book carousel
 
 - Five NASA mission books were included.
 
-- ChatGPT was used for code generation and debugging.
+- ChatGPT, Google AI Studio and GitHub Copilot were used for code generation and debugging.
 
 - VS Code and GitHub were used for development and collaboration.
 
