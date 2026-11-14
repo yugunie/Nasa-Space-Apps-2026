@@ -1,0 +1,75 @@
+NEAR SHOEMAKER 3D STORY -> ECHOES BEYOND EARTH HOMEPAGE
+======================================================
+
+IMPORTANT: This is an ADD-ON for your EXISTING Vite/React GitHub project.
+DO NOT delete your project or replace the existing src/App.tsx, src/main.tsx,
+index.html, src/index.css, src/three, HomePage.css, package.json or vite.config.ts.
+
+BACK UP your project or commit your changes first.
+
+STEP 1: Extract this ZIP into the ROOT of Nasa-Space-Apps-2026
+        (the folder containing package.json).
+        When Windows asks whether to MERGE folders, select Yes.
+        It will add near-shoemaker.html and src/stories/near-shoemaker/.
+        It will update src/components/SpaceArchiveHome.tsx.tsx.
+        IMPORTANT: Only overwrite that ONE homepage TSX file; do not change CSS.
+
+STEP 2: Open terminal in VS Code in project folder. Install required packages:
+
+        bun add three lucide-react
+        bun add -d @types/three tailwindcss @tailwindcss/vite
+
+        If you already have any of these packages, bun will reuse/update as needed.
+
+STEP 3: In project vite.config.ts ensure Tailwind is enabled:
+
+        import tailwindcss from '@tailwindcss/vite';
+
+        In the existing plugins array add tailwindcss(), e.g.
+        plugins: [react(), tailwindcss()],
+
+        DO NOT overwrite the rest of vite.config.ts.
+        This enables the storybook's Tailwind CSS styles.
+
+STEP 4: Run bun run dev in terminal. Look for Local: http://localhost:<PORT>/
+
+        Homepage:       http://localhost:<PORT>/homepage-preview.html
+        NEAR Shoemaker: http://localhost:<PORT>/near-shoemaker.html
+
+        On homepage select NEAR Shoemaker then click the centered cover
+        (or the 'Open this book' button). It will navigate to the 3D story.
+        In the 3D story select 'Library' to return to the homepage.
+
+STEP 5 (FOR DEPLOYMENT / PRODUCTION BUILDS):
+        To make Vite BUILD the two separate HTML pages too, in your existing
+        vite.config.ts add or merge the following build configuration:
+
+        import { fileURLToPath, URL } from 'node:url';
+        ...
+        build: {
+          rollupOptions: {
+            input: {
+              main: fileURLToPath(new URL('./index.html', import.meta.url)),
+              homepage: fileURLToPath(new URL('./homepage-preview.html', import.meta.url)),
+              nearShoemaker: fileURLToPath(new URL('./near-shoemaker.html', import.meta.url)),
+            },
+          },
+        },
+
+        Note: If your vite.config.ts already has build.rollupOptions.input,
+        ADD the nearShoemaker entry there rather than replacing other entries.
+        For Vite 8 rollupOptions is an alias of the build's underlying options.
+        Verify with bun run build. If your project has custom build rules, we
+        can tailor this to your actual vite.config.ts.
+
+Only Book 5 links to the new 3D page at present. The other four retain
+original pop-up info books until their 3D experiences are ready.
+The uploaded AI Studio source has no direct references to Gemini API calls;
+no additional Gemini API key is used by the source included in this patch.
+
+TROUBLESHOOTING:
+- If you see your other 3D model at the root URL, use /homepage-preview.html.
+- If the 3D page looks plain, Tailwind plugin is missing in vite.config.ts.
+- If imports fail, make sure you ran the two bun add commands in project root.
+- If homepage import fails, retain the exact original filename
+  SpaceArchiveHome.tsx.tsx (yes, two .tsx suffixes).

@@ -366,6 +366,15 @@ export default function HomePage() {
     setActiveId(visible[next].id);
   };
 
+  // Only Book 5 has a connected 3D story so far. Other books keep their original popup.
+  const openArchive = (id: string) => {
+    if (id === "near-shoemaker") {
+      window.location.assign("/near-shoemaker.html");
+      return;
+    }
+    setReading(true);
+  };
+
   const changeFilter = (next: Filter) => {
     setFilter(next);
     const first = ARCHIVES.find((book) => next === "all" || book.region === next);
@@ -461,7 +470,7 @@ export default function HomePage() {
                     type="button"
                     className={`sa-book-slot ${centered ? "is-centered" : ""}`}
                     style={style}
-                    onClick={() => centered ? setReading(true) : setActiveId(book.id)}
+                    onClick={() => centered ? openArchive(book.id) : setActiveId(book.id)}
                     aria-label={`${centered ? "Read" : "Select"} ${book.name}`}
                     aria-pressed={centered}
                   >
@@ -504,7 +513,7 @@ export default function HomePage() {
             <h2>{activeBook.name}</h2>
             <p>{activeBook.summary}</p>
           </div>
-          <button className="sa-read-button" type="button" onClick={() => setReading(true)}>
+          <button className="sa-read-button" type="button" onClick={() => openArchive(activeBook.id)}>
             <span>▤</span> Open this book <span>→</span>
           </button>
         </section>

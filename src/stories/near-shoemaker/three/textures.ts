@@ -1,0 +1,616 @@
+import * as THREE from 'three';
+import type { PopupLine, StoryPage } from '../story/storyData';
+
+export type NearMood = 'normal' | 'happy' | 'shocked' | 'crying' | 'smug' | 'sleeping';
+
+function configureColorTexture(
+  canvas: HTMLCanvasElement,
+  maxAnisotropy = 4,
+): THREE.CanvasTexture {
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = maxAnisotropy;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+/**
+ * Renders 90-degree upright pop-up story text onto a 100% transparent canvas.
+ * Zero background box behind the text — uses a bold dark outline + shadow
+ * so high-contrast letters stay razor-sharp against deep space.
+ */
+export function createPopupTextTexture(
+  lines: PopupLine[],
+  maxAnisotropy = 4,
+): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 2048;
+  canvas.height = 768;
+  const ctx = canvas.getContext('2d')!;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Word-wrap each PopupLine cleanly so text never overflows
+  const wrappedEntries: { text: string; color: string; fontSize: number }[] = [];
+  const maxWidth = canvas.width - 180;
+
+  for (const line of lines) {
+    const baseSize = Math.round(92 * (line.scale ?? 1));
+    ctx.font = `700 ${baseSize}px "Fredoka", "Plus Jakarta Sans", sans-serif`;
+    const words = line.text.split(' ');
+    let current = '';
+
+    for (const word of words) {
+      const test = current ? `${current} ${word}` : word;
+      if (ctx.measureText(test).width > maxWidth && current) {
+        wrappedEntries.push({
+          text: current,
+          color: line.color ?? '#FFFFFF',
+          fontSize: baseSize,
+        });
+        current = word;
+      } else {
+        current = test;
+      }
+    }
+    if (current) {
+      wrappedEntries.push({
+        text: current,
+        color: line.color ?? '#FFFFFF',
+        fontSize: baseSize,
+      });
+    }
+  }
+
+  // Compute total vertical height to bottom-align gently above the book crease
+  const lineGap = 24;
+  const totalHeight = wrappedEntries.reduce(
+    (sum, item, idx) => sum + item.fontSize * 1.12 + (idx > 0 ? lineGap : 0),
+    0,
+  );
+  let y = Math.max(110, (canvas.height - totalHeight) * 0.56);
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.lineJoin = 'round';
+  ctx.miterLimit = 2;
+
+  for (const entry of wrappedEntries) {
+    ctx.font = `700 ${entry.fontSize}px "Fredoka", "Plus Jakarta Sans", sans-serif`;
+
+    // Thick high-contrast dark outline (no box background)
+    ctx.save();
+    ctx.shadowColor = 'rgba(3, 6, 20, 0.96)';
+    ctx.shadowBlur = 22;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 6;
+    ctx.strokeStyle = '#050819';
+    ctx.lineWidth = Math.max(18, Math.round(entry.fontSize * 0.22));
+    ctx.strokeText(entry.text, canvas.width / 2, y);
+    ctx.restore();
+
+    // Crisp second stroke for clean edge separation
+    ctx.strokeStyle = '#0B1230';
+    ctx.lineWidth = Math.max(10, Math.round(entry.fontSize * 0.12));
+    ctx.strokeText(entry.text, canvas.width / 2, y);
+
+    // Bright luminous fill
+    ctx.fillStyle = entry.color;
+    ctx.fillText(entry.text, canvas.width / 2, y);
+
+    y += entry.fontSize * 1.12 + lineGap;
+  }
+
+  const tex = configureColorTexture(canvas, maxAnisotropy);
+  tex.generateMipmaps = true;
+  tex.minFilter = THREE.LinearMipmapLinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  return tex;
+}
+
+export function createCoverTexture(maxAnisotropy = 4): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1024;
+  canvas.height = 1280;
+  const ctx = canvas.getContext('2d')!;
+
+  // Deep, luxurious midnight dark-blue leather gradient
+  const grad = ctx.createRadialGradient(512, 560, 80, 512, 640, 820);
+  grad.addColorStop(0, '#132044');
+  grad.addColorStop(0.55, '#0C1633');
+  grad.addColorStop(1, '#070D20');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 1024, 1280);
+
+  // Fine dark bookcloth / leather grain
+  ctx.fillStyle = 'rgba(255, 240, 200, 0.016)';
+  for (let i = 0; i < 1280; i += 6) {
+    ctx.fillRect(0, i, 1024, 1);
+  }
+  for (let i = 0; i < 1024; i += 6) {
+    ctx.fillRect(i, 0, 1, 1280);
+  }
+
+  // Subtle warm champagne-gold aura behind central medallion
+  const glow = ctx.createRadialGradient(512, 690, 30, 512, 690, 340);
+  glow.addColorStop(0, 'rgba(213, 172, 85, 0.14)');
+  glow.addColorStop(0.55, 'rgba(130, 155, 210, 0.06)');
+  glow.addColorStop(1, 'rgba(4, 5, 12, 0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, 1024, 1280);
+
+  // Burnished antique-gold foil double border frame
+  ctx.strokeStyle = '#D5AC55';
+  ctx.lineWidth = 8;
+  ctx.strokeRect(54, 54, 916, 1172);
+  ctx.strokeStyle = 'rgba(213, 172, 85, 0.6)';
+  ctx.lineWidth = 2.5;
+  ctx.strokeRect(78, 78, 868, 1124);
+
+  // Ornamental gold corner diamonds
+  const cornerCoords = [
+    [98, 98],
+    [926, 98],
+    [98, 1182],
+    [926, 1182],
+  ];
+  ctx.fillStyle = '#D5AC55';
+  for (const [cx, cy] of cornerCoords) {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 12);
+    ctx.lineTo(cx + 12, cy);
+    ctx.lineTo(cx, cy + 12);
+    ctx.lineTo(cx - 12, cy);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Decorative orbital rings around medallion
+  ctx.save();
+  ctx.translate(512, 690);
+  ctx.strokeStyle = 'rgba(213, 172, 85, 0.42)';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 265, 160, -0.25, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.setLineDash([10, 10]);
+  ctx.strokeStyle = 'rgba(186, 204, 232, 0.35)';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 310, 195, 0.2, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+
+  // Delicate champagne-gold stars on cover
+  const stars = [
+    [180, 170, 8],
+    [840, 190, 9],
+    [200, 960, 7],
+    [820, 940, 9],
+    [512, 145, 7],
+    [160, 530, 6],
+    [860, 520, 6],
+  ];
+  ctx.fillStyle = '#E6C67A';
+  for (const [sx, sy, sr] of stars) {
+    ctx.beginPath();
+    ctx.moveTo(sx, sy - sr * 1.6);
+    ctx.lineTo(sx + sr * 0.4, sy - sr * 0.4);
+    ctx.lineTo(sx + sr * 1.6, sy);
+    ctx.lineTo(sx + sr * 0.4, sy + sr * 0.4);
+    ctx.lineTo(sx, sy + sr * 1.6);
+    ctx.lineTo(sx - sr * 0.4, sy + sr * 0.4);
+    ctx.lineTo(sx - sr * 1.6, sy);
+    ctx.lineTo(sx - sr * 0.4, sy - sr * 0.4);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Cover Title Typography in champagne gold & warm ivory
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#E8C574';
+  ctx.font = '700 108px "Fredoka", sans-serif';
+  ctx.fillText('NEAR', 512, 290);
+  ctx.font = '700 84px "Fredoka", sans-serif';
+  ctx.fillStyle = '#F3EDE0';
+  ctx.fillText('SHOEMAKER', 512, 392);
+
+  // Subtitle
+  ctx.fillStyle = '#A8B9D6';
+  ctx.font = '600 32px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('A 3D Space Pop-Up Adventure', 512, 462);
+
+  // Bottom author line
+  ctx.fillStyle = '#D5AC55';
+  ctx.font = '600 30px "Fredoka", sans-serif';
+  ctx.fillText('Narrated by Jacob  ·  With Lily', 512, 1110);
+
+  ctx.fillStyle = 'rgba(243, 237, 224, 0.72)';
+  ctx.font = '600 22px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('CLICK TO OPEN BOOK', 512, 1168);
+
+  return configureColorTexture(canvas, maxAnisotropy);
+}
+
+export function createBackCoverTexture(maxAnisotropy = 4): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 640;
+  const ctx = canvas.getContext('2d')!;
+
+  ctx.fillStyle = '#0A122B';
+  ctx.fillRect(0, 0, 512, 640);
+  ctx.strokeStyle = '#D5AC55';
+  ctx.lineWidth = 5;
+  ctx.strokeRect(28, 28, 456, 584);
+
+  return configureColorTexture(canvas, maxAnisotropy);
+}
+
+/**
+ * Creates calm, matte neutral grey spread textures (one tone lighter than dark slate,
+ * zero cyan/neon, zero white glare) so 3D animations and 90-degree text stand out crisply.
+ */
+export function createSpreadPageTexture(
+  side: 'left' | 'right',
+  page: StoryPage,
+  maxAnisotropy = 4,
+): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1024;
+  canvas.height = 1280;
+  const ctx = canvas.getContext('2d')!;
+
+  // Calm, matte neutral grey (one tone lighter, zero cyan/neon)
+  const bg = ctx.createLinearGradient(0, 0, 1024, 1280);
+  bg.addColorStop(0, '#585E6C');
+  bg.addColorStop(1, '#4B505E');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, 1024, 1280);
+
+  // Subtle matte paper grain
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.015)';
+  for (let i = 0; i < 1280; i += 8) {
+    ctx.fillRect(0, i, 1024, 2);
+  }
+
+  // Inner crease shading toward the spine
+  const creaseGrad =
+    side === 'left'
+      ? ctx.createLinearGradient(860, 0, 1024, 0)
+      : ctx.createLinearGradient(0, 0, 164, 0);
+  if (side === 'left') {
+    creaseGrad.addColorStop(0, 'rgba(10, 12, 20, 0)');
+    creaseGrad.addColorStop(1, 'rgba(10, 12, 20, 0.42)');
+    ctx.fillStyle = creaseGrad;
+    ctx.fillRect(860, 0, 164, 1280);
+  } else {
+    creaseGrad.addColorStop(0, 'rgba(10, 12, 20, 0.42)');
+    creaseGrad.addColorStop(1, 'rgba(10, 12, 20, 0)');
+    ctx.fillStyle = creaseGrad;
+    ctx.fillRect(0, 0, 164, 1280);
+  }
+
+  // Subtle neutral-silver border & celestial compass lines
+  ctx.strokeStyle = 'rgba(226, 232, 240, 0.16)';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(56, 56, 912, 1168);
+
+  ctx.save();
+  ctx.translate(512, 640);
+  ctx.strokeStyle = 'rgba(226, 232, 240, 0.14)';
+  ctx.lineWidth = 2.5;
+  ctx.setLineDash([14, 12]);
+  ctx.beginPath();
+  ctx.arc(0, 0, 290, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.setLineDash([]);
+  ctx.strokeStyle = 'rgba(213, 172, 85, 0.22)';
+  ctx.beginPath();
+  ctx.arc(0, 0, 180, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+
+  // Subtle corner dots
+  ctx.fillStyle = 'rgba(226, 232, 240, 0.25)';
+  const pts = [
+    [130, 140],
+    [890, 140],
+    [130, 1120],
+    [890, 1120],
+  ];
+  for (const [x, y] of pts) {
+    ctx.beginPath();
+    ctx.arc(x, y, 5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Crisp soft-silver chapter label & page number at bottom margin
+  ctx.fillStyle = '#CBD2DF';
+  ctx.font = '600 26px "Fredoka", sans-serif';
+  if (side === 'left') {
+    ctx.textAlign = 'left';
+    ctx.fillText(page.chapterTitle, 84, 1185);
+  } else {
+    ctx.textAlign = 'right';
+    ctx.fillText(`Page ${page.index}`, 940, 1185);
+  }
+
+  return configureColorTexture(canvas, maxAnisotropy);
+}
+
+export function createVisorTexture(
+  mood: NearMood,
+  maxAnisotropy = 4,
+): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d')!;
+
+  // Dark sleek digital visor glass
+  ctx.fillStyle = '#0B132B';
+  ctx.fillRect(0, 0, 512, 256);
+
+  // Subtle scanlines
+  ctx.fillStyle = 'rgba(124, 232, 255, 0.06)';
+  for (let y = 0; y < 256; y += 8) {
+    ctx.fillRect(0, y, 512, 2);
+  }
+
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  const leftX = 166;
+  const rightX = 346;
+  const eyeY = 118;
+
+  if (mood === 'normal') {
+    ctx.fillStyle = '#6CF0FF';
+    ctx.beginPath();
+    ctx.arc(leftX, eyeY, 34, 0, Math.PI * 2);
+    ctx.arc(rightX, eyeY, 34, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.arc(leftX - 10, eyeY - 10, 11, 0, Math.PI * 2);
+    ctx.arc(rightX - 10, eyeY - 10, 11, 0, Math.PI * 2);
+    ctx.fill();
+    // Cute small smile
+    ctx.strokeStyle = '#6CF0FF';
+    ctx.lineWidth = 10;
+    ctx.beginPath();
+    ctx.arc(256, 152, 34, 0.2, Math.PI - 0.2);
+    ctx.stroke();
+  } else if (mood === 'happy') {
+    ctx.strokeStyle = '#7DFF9B';
+    ctx.lineWidth = 18;
+    // Happy curved ^ ^ eyes
+    ctx.beginPath();
+    ctx.arc(leftX, eyeY + 14, 34, Math.PI + 0.3, -0.3);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(rightX, eyeY + 14, 34, Math.PI + 0.3, -0.3);
+    ctx.stroke();
+    // Big joyful smile
+    ctx.fillStyle = '#7DFF9B';
+    ctx.beginPath();
+    ctx.arc(256, 152, 42, 0, Math.PI);
+    ctx.fill();
+    // Rosy digital cheeks
+    ctx.fillStyle = 'rgba(255, 128, 171, 0.65)';
+    ctx.beginPath();
+    ctx.arc(105, 165, 18, 0, Math.PI * 2);
+    ctx.arc(407, 165, 18, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (mood === 'shocked') {
+    ctx.strokeStyle = '#FFE066';
+    ctx.lineWidth = 14;
+    ctx.beginPath();
+    ctx.arc(leftX, eyeY - 6, 40, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(rightX, eyeY - 6, 40, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = '#FFE066';
+    ctx.beginPath();
+    ctx.arc(leftX, eyeY - 6, 13, 0, Math.PI * 2);
+    ctx.arc(rightX, eyeY - 6, 13, 0, Math.PI * 2);
+    ctx.fill();
+    // Surprised 'O' mouth
+    ctx.strokeStyle = '#FF8A80';
+    ctx.lineWidth = 12;
+    ctx.beginPath();
+    ctx.ellipse(256, 182, 20, 28, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  } else if (mood === 'crying') {
+    // Sad slanted eyes + tear trails
+    ctx.strokeStyle = '#80D8FF';
+    ctx.lineWidth = 15;
+    ctx.beginPath();
+    ctx.moveTo(leftX - 30, eyeY + 12);
+    ctx.lineTo(leftX + 26, eyeY - 12);
+    ctx.moveTo(rightX + 30, eyeY + 12);
+    ctx.lineTo(rightX - 26, eyeY - 12);
+    ctx.stroke();
+    // Teardrop streams
+    ctx.fillStyle = '#40C4FF';
+    ctx.fillRect(leftX - 10, eyeY + 18, 18, 95);
+    ctx.fillRect(rightX - 8, eyeY + 18, 18, 95);
+    // Wobbly frown
+    ctx.strokeStyle = '#80D8FF';
+    ctx.lineWidth = 11;
+    ctx.beginPath();
+    ctx.arc(256, 198, 32, Math.PI + 0.35, -0.35);
+    ctx.stroke();
+  } else if (mood === 'smug') {
+    // Confident smirk + sparkling eyes (shades sit in front of visor)
+    ctx.fillStyle = '#FFE066';
+    ctx.beginPath();
+    ctx.arc(leftX, eyeY, 26, 0, Math.PI * 2);
+    ctx.arc(rightX, eyeY, 26, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#FFE066';
+    ctx.lineWidth = 13;
+    ctx.beginPath();
+    ctx.arc(262, 148, 44, 0.25, Math.PI - 0.55);
+    ctx.stroke();
+  } else if (mood === 'sleeping') {
+    ctx.strokeStyle = '#A0C4FF';
+    ctx.lineWidth = 14;
+    ctx.beginPath();
+    ctx.arc(leftX, eyeY + 6, 30, 0.2, Math.PI - 0.2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(rightX, eyeY + 6, 30, 0.2, Math.PI - 0.2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(256, 162, 24, 0.25, Math.PI - 0.25);
+    ctx.stroke();
+  }
+
+  return configureColorTexture(canvas, maxAnisotropy);
+}
+
+export function createSolarPanelTexture(maxAnisotropy = 4): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d')!;
+
+  ctx.fillStyle = '#122E6E';
+  ctx.fillRect(0, 0, 512, 512);
+
+  // Photovoltaic grid cells
+  ctx.strokeStyle = '#4B8BFA';
+  ctx.lineWidth = 4;
+  for (let x = 0; x <= 512; x += 64) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, 512);
+    ctx.stroke();
+  }
+  for (let y = 0; y <= 512; y += 64) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(512, y);
+    ctx.stroke();
+  }
+
+  // Subtle metallic busbars
+  ctx.strokeStyle = 'rgba(210, 232, 255, 0.35)';
+  ctx.lineWidth = 2;
+  for (let x = 32; x < 512; x += 64) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, 512);
+    ctx.stroke();
+  }
+
+  return configureColorTexture(canvas, maxAnisotropy);
+}
+
+export function createEarthTexture(maxAnisotropy = 4): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d')!;
+
+  // Rich ocean blue
+  const ocean = ctx.createLinearGradient(0, 0, 0, 256);
+  ocean.addColorStop(0, '#1D74D1');
+  ocean.addColorStop(0.5, '#1B8BE8');
+  ocean.addColorStop(1, '#155AA8');
+  ctx.fillStyle = ocean;
+  ctx.fillRect(0, 0, 512, 256);
+
+  // Stylized vibrant continents
+  ctx.fillStyle = '#4CCB6C';
+  const blobs = [
+    [90, 95, 55, 38],
+    [130, 145, 38, 45],
+    [255, 88, 65, 34],
+    [290, 138, 45, 42],
+    [395, 105, 58, 40],
+    [415, 175, 36, 26],
+  ];
+  for (const [bx, by, rx, ry] of blobs) {
+    ctx.beginPath();
+    ctx.ellipse(bx, by, rx, ry, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Polar ice caps
+  ctx.fillStyle = '#EEF8FF';
+  ctx.fillRect(0, 0, 512, 22);
+  ctx.fillRect(0, 234, 512, 22);
+
+  // Soft swirling white clouds
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+  for (let i = 0; i < 14; i++) {
+    const cx = (i * 41 + 20) % 512;
+    const cy = 40 + ((i * 53) % 176);
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 34, 11, 0.15, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  return configureColorTexture(canvas, maxAnisotropy);
+}
+
+export function createAsteroidTexture(
+  baseHex: string,
+  craterHex: string,
+  maxAnisotropy = 4,
+): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d')!;
+
+  ctx.fillStyle = baseHex;
+  ctx.fillRect(0, 0, 512, 512);
+
+  // Rocky mottling
+  for (let i = 0; i < 160; i++) {
+    const x = ((i * 173) % 512);
+    const y = ((i * 257) % 512);
+    const r = 8 + (i % 24);
+    ctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)';
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Craters with sunlit rims
+  for (let i = 0; i < 26; i++) {
+    const x = 32 + ((i * 97) % 448);
+    const y = 32 + ((i * 139) % 448);
+    const r = 12 + ((i * 7) % 28);
+    ctx.fillStyle = craterHex;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 240, 215, 0.28)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(x, y, r, -0.6, 2.2);
+    ctx.stroke();
+  }
+
+  return configureColorTexture(canvas, maxAnisotropy);
+}
+
+export function createGlowSpriteTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d')!;
+  const grad = ctx.createRadialGradient(64, 64, 4, 64, 64, 62);
+  grad.addColorStop(0, 'rgba(255,255,255,1)');
+  grad.addColorStop(0.35, 'rgba(255,255,255,0.55)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 128, 128);
+  return configureColorTexture(canvas, 1);
+}
