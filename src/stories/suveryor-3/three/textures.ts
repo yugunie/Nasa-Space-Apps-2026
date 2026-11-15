@@ -208,21 +208,22 @@ export function createCoverTexture(maxAnisotropy = 4): THREE.CanvasTexture {
   // Cover Title Typography in champagne gold & warm ivory
   ctx.textAlign = 'center';
   ctx.fillStyle = '#E8C574';
-  ctx.font = '700 108px "Fredoka", sans-serif';
-  ctx.fillText('NEAR', 512, 290);
-  ctx.font = '700 84px "Fredoka", sans-serif';
+  ctx.font = '700 96px "Fredoka", sans-serif';
+  ctx.fillText('Surveyor 3', 512, 300);
+  ctx.font = '700 48px "Fredoka", sans-serif';
   ctx.fillStyle = '#F3EDE0';
-  ctx.fillText('SHOEMAKER', 512, 392);
+  ctx.fillText('The Little Robot Who', 512, 390);
+  ctx.fillText('Waited for Visitors', 512, 448);
 
   // Subtitle
   ctx.fillStyle = '#A8B9D6';
   ctx.font = '600 32px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText('A 3D Space Pop-Up Adventure', 512, 462);
+  ctx.fillText('A Moon Adventure', 512, 510);
 
   // Bottom author line
   ctx.fillStyle = '#D5AC55';
   ctx.font = '600 30px "Fredoka", sans-serif';
-  ctx.fillText('Narrated by Jacob  ·  With Lily', 512, 1110);
+  ctx.fillText('A story about discovery and helping', 512, 1110);
 
   ctx.fillStyle = 'rgba(243, 237, 224, 0.72)';
   ctx.font = '600 22px "Plus Jakarta Sans", sans-serif';

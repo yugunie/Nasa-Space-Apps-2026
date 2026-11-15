@@ -75,6 +75,344 @@ function createPhotoTile(): THREE.Group {
   return g;
 }
 
+function addCylinderBetween(
+  group: THREE.Group,
+  start: THREE.Vector3,
+  end: THREE.Vector3,
+  radius: number,
+  material: THREE.Material,
+): THREE.Mesh {
+  const direction = new THREE.Vector3().subVectors(end, start);
+  const mesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(radius, radius, direction.length(), 8),
+    material,
+  );
+  mesh.position.copy(start).add(end).multiplyScalar(0.5);
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+  group.add(mesh);
+  return mesh;
+}
+
+function createMoonGround(): THREE.Group {
+  const ground = new THREE.Group();
+  const surfaceMat = new THREE.MeshStandardMaterial({ color: 0xaaa7a1, roughness: 1 });
+  const craterMat = new THREE.MeshStandardMaterial({ color: 0x777671, roughness: 1 });
+  const rimMat = new THREE.MeshStandardMaterial({ color: 0xc3c0b9, roughness: 1 });
+  const surface = new THREE.Mesh(new THREE.CylinderGeometry(4.4, 4.65, 0.3, 48), surfaceMat);
+  surface.position.y = -0.15;
+  surface.receiveShadow = true;
+  ground.add(surface);
+
+  for (const [x, z, radius] of [
+    [-2.8, -0.8, 0.42],
+    [2.4, -0.7, 0.52],
+    [-1.6, 1.15, 0.3],
+    [2.9, 1.35, 0.25],
+    [-3.3, 1.6, 0.2],
+  ]) {
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(radius, 0.055, 8, 24), rimMat);
+    rim.rotation.x = -Math.PI / 2;
+    rim.position.set(x, 0.015, z);
+    const crater = new THREE.Mesh(
+      new THREE.CircleGeometry(radius, 24),
+      craterMat,
+    );
+    crater.rotation.x = -Math.PI / 2;
+    crater.position.set(x, 0.005, z);
+    ground.add(rim, crater);
+  }
+  return ground;
+}
+
+function createSurveyorLander(): { group: THREE.Group; digArm: THREE.Group } {
+  const group = new THREE.Group();
+  const gold = new THREE.MeshStandardMaterial({ color: 0xc99b4b, metalness: 0.62, roughness: 0.38 });
+  const silver = new THREE.MeshStandardMaterial({ color: 0xcbd0d4, metalness: 0.72, roughness: 0.28 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x343b42, metalness: 0.45, roughness: 0.55 });
+  const glass = new THREE.MeshStandardMaterial({ color: 0x52c9e8, emissive: 0x145276, roughness: 0.2 });
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.5, 0.68), gold);
+  body.position.y = 0.92;
+  body.castShadow = true;
+  group.add(body);
+  const top = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.38, 0.16, 8), silver);
+  top.position.y = 1.25;
+  group.add(top);
+
+  const cameraMast = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.06, 0.62, 8), silver);
+  cameraMast.position.set(-0.15, 1.62, 0);
+  group.add(cameraMast);
+  const camera = new THREE.Mesh(new THREE.BoxGeometry(0.31, 0.24, 0.24), dark);
+  camera.position.set(-0.15, 1.98, 0);
+  group.add(camera);
+  const cameraLens = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 10), glass);
+  cameraLens.position.set(-0.15, 1.98, 0.14);
+  group.add(cameraLens);
+
+  for (let i = 0; i < 3; i++) {
+    const angle = (i * Math.PI * 2) / 3 + Math.PI / 6;
+    const hip = new THREE.Vector3(Math.cos(angle) * 0.27, 0.75, Math.sin(angle) * 0.27);
+    const foot = new THREE.Vector3(Math.cos(angle) * 0.72, 0.06, Math.sin(angle) * 0.72);
+    addCylinderBetween(group, hip, foot, 0.045, silver);
+    const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.19, 0.08, 12), gold);
+    pad.position.copy(foot);
+    pad.position.y = 0.04;
+    group.add(pad);
+  }
+
+  const panel = new THREE.Mesh(
+    new THREE.BoxGeometry(0.82, 0.035, 0.56),
+    new THREE.MeshStandardMaterial({ color: 0x315a86, metalness: 0.52, roughness: 0.26 }),
+  );
+  panel.position.set(-0.72, 1.0, -0.03);
+  panel.rotation.z = -0.18;
+  group.add(panel);
+
+  const digArm = new THREE.Group();
+  digArm.position.set(0.35, 0.85, 0.12);
+  const upper = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.075, 0.075), silver);
+  upper.position.x = 0.24;
+  digArm.add(upper);
+  const forearm = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.065, 0.065), silver);
+  forearm.position.set(0.62, -0.12, 0);
+  forearm.rotation.z = -0.35;
+  digArm.add(forearm);
+  const scoop = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.16, 0.22), gold);
+  scoop.position.set(0.82, -0.27, 0);
+  digArm.add(scoop);
+  group.add(digArm);
+
+  const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.56, 8), silver);
+  antenna.position.set(0.22, 1.48, -0.15);
+  antenna.rotation.z = -0.35;
+  group.add(antenna);
+  const antennaTip = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), gold);
+  antennaTip.position.set(0.32, 1.75, -0.15);
+  group.add(antennaTip);
+  return { group, digArm };
+}
+
+function createApolloLunarModule(): THREE.Group {
+  const module = new THREE.Group();
+  const gold = new THREE.MeshStandardMaterial({ color: 0xc79a4f, metalness: 0.68, roughness: 0.34 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x31343b, metalness: 0.35, roughness: 0.52 });
+  const windowMat = new THREE.MeshStandardMaterial({ color: 0x294e69, metalness: 0.32, roughness: 0.2 });
+  const ascent = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.55, 0.68, 6), gold);
+  ascent.position.y = 1.47;
+  module.add(ascent);
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.38, 0.08), windowMat);
+  cabin.position.set(0, 1.5, 0.31);
+  module.add(cabin);
+  const descent = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.92, 0.48, 8), gold);
+  descent.position.y = 0.86;
+  module.add(descent);
+  const engine = new THREE.Mesh(new THREE.ConeGeometry(0.34, 0.42, 8), dark);
+  engine.position.y = 0.42;
+  engine.rotation.x = Math.PI;
+  module.add(engine);
+  for (let i = 0; i < 4; i++) {
+    const angle = (i * Math.PI) / 2 + Math.PI / 4;
+    const hip = new THREE.Vector3(Math.cos(angle) * 0.55, 0.76, Math.sin(angle) * 0.55);
+    const foot = new THREE.Vector3(Math.cos(angle) * 1.08, 0.06, Math.sin(angle) * 1.08);
+    addCylinderBetween(module, hip, foot, 0.045, dark);
+    const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.2, 0.07, 10), gold);
+    pad.position.set(foot.x, 0.035, foot.z);
+    module.add(pad);
+  }
+  return module;
+}
+
+function disposeDioramaGroup(group: THREE.Group): void {
+  const geometries = new Set<THREE.BufferGeometry>();
+  const materials = new Set<THREE.Material>();
+  const textures = new Set<THREE.Texture>();
+  group.traverse((object) => {
+    if (!(object instanceof THREE.Mesh)) return;
+    geometries.add(object.geometry);
+    const meshMaterials = Array.isArray(object.material) ? object.material : [object.material];
+    meshMaterials.forEach((material) => {
+      materials.add(material);
+      Object.values(material).forEach((value) => {
+        if (value instanceof THREE.Texture) textures.add(value);
+      });
+    });
+  });
+  geometries.forEach((geometry) => geometry.dispose());
+  materials.forEach((material) => material.dispose());
+  textures.forEach((texture) => texture.dispose());
+}
+
+function buildSurveyorDiorama(
+  sceneId: StorySceneId,
+  maxAnisotropy: number,
+): ActiveDiorama {
+  const group = new THREE.Group();
+  const moon = createMoonGround();
+  group.add(moon);
+  let updateFn: ActiveDiorama['update'] = () => {};
+
+  const surveyor = createSurveyorLander();
+  if (sceneId === 'meet-surveyor') {
+    surveyor.group.position.set(0.65, 0, 0.05);
+    surveyor.group.scale.setScalar(0.86);
+    group.add(surveyor.group);
+    const lily = createKidCharacter('lily');
+    lily.group.position.set(-1.55, 0, 0.72);
+    lily.group.rotation.y = -0.3;
+    group.add(lily.group);
+    const earth = createEarth(maxAnisotropy);
+    earth.position.set(-2.2, 2.45, -1.5);
+    earth.scale.setScalar(0.42);
+    group.add(earth);
+    updateFn = (t, _delta, boost) => {
+      earth.rotation.y = t * 0.2;
+      lily.rightArm.rotation.z = 2.2 + Math.sin(t * 5) * 0.28;
+      surveyor.group.rotation.y = Math.sin(t * 0.8) * 0.12 + boost * Math.PI * 2;
+    };
+  } else if (sceneId === 'mission') {
+    moon.position.set(2.1, 0, 0);
+    moon.scale.setScalar(0.42);
+    const earth = createEarth(maxAnisotropy);
+    earth.position.set(-2.4, 0.95, 0.25);
+    earth.scale.setScalar(0.72);
+    group.add(earth);
+    surveyor.group.position.set(-0.1, 1.15, 0.35);
+    surveyor.group.scale.setScalar(0.55);
+    group.add(surveyor.group);
+    const scientist1 = createScientist(0x4a3525, 0x38bdf8, 'clipboard');
+    scientist1.group.position.set(-2.9, 0, 1.25);
+    scientist1.group.scale.setScalar(0.65);
+    group.add(scientist1.group);
+    const route = new THREE.Group();
+    const dotMaterial = new THREE.MeshBasicMaterial({ color: 0xffe066 });
+    for (let i = 0; i <= 8; i++) {
+      const u = i / 8;
+      const dot = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 8), dotMaterial);
+      dot.position.set(-1.4 + u * 2.7, 1.0 + Math.sin(u * Math.PI) * 0.45, 0.25);
+      route.add(dot);
+    }
+    group.add(route);
+    updateFn = (t, _delta, boost) => {
+      earth.rotation.y = t * 0.3;
+      const phase = (Math.sin(t * (0.45 + boost * 0.25)) + 1) / 2;
+      surveyor.group.position.set(-1.25 + phase * 2.2, 1.0 + Math.sin(phase * Math.PI) * 0.65, 0.35);
+      surveyor.group.rotation.z = -0.12 * Math.cos(t);
+    };
+  } else if (sceneId === 'moon-work') {
+    surveyor.group.position.set(-0.35, 0, 0.1);
+    group.add(surveyor.group);
+    const photo = createPhotoTile();
+    photo.position.set(1.55, 1.15, 0.35);
+    photo.scale.setScalar(1.15);
+    group.add(photo);
+    const soilSample = new THREE.Mesh(
+      new THREE.SphereGeometry(0.18, 12, 10),
+      new THREE.MeshStandardMaterial({ color: 0x8b8880, roughness: 1 }),
+    );
+    soilSample.scale.y = 0.42;
+    soilSample.position.set(0.75, 0.05, 0.25);
+    group.add(soilSample);
+    updateFn = (t, _delta, boost) => {
+      surveyor.digArm.rotation.z = -0.18 + Math.sin(t * 2.4) * 0.22 - boost * 0.45;
+      photo.rotation.y = Math.sin(t * 1.4) * 0.2;
+      photo.position.y = 1.15 + Math.sin(t * 2) * 0.08;
+    };
+  } else if (sceneId === 'signal-quiet') {
+    surveyor.group.position.set(0.2, 0, 0);
+    surveyor.group.rotation.y = 0.55;
+    group.add(surveyor.group);
+    const earth = createEarth(maxAnisotropy);
+    earth.position.set(2.35, 2.1, -1.5);
+    earth.scale.setScalar(0.36);
+    group.add(earth);
+    updateFn = (t) => {
+      earth.rotation.y = t * 0.12;
+    };
+  } else if (sceneId === 'apollo-arrives') {
+    surveyor.group.position.set(-0.7, 0, 0.25);
+    surveyor.group.scale.setScalar(0.76);
+    group.add(surveyor.group);
+    const apollo = createApolloLunarModule();
+    apollo.position.set(1.6, 0, 0.1);
+    apollo.scale.setScalar(0.78);
+    group.add(apollo);
+    updateFn = (t, _delta, boost) => {
+      apollo.position.y = Math.abs(Math.sin(t * 1.2)) * 0.08 + boost * 0.22;
+      apollo.rotation.y = Math.sin(t * 0.5) * 0.08;
+    };
+  } else if (sceneId === 'visitors') {
+    surveyor.group.position.set(-0.75, 0, -0.15);
+    surveyor.group.scale.setScalar(0.72);
+    group.add(surveyor.group);
+    const apollo = createApolloLunarModule();
+    apollo.position.set(2.4, 0, -0.35);
+    apollo.scale.setScalar(0.42);
+    group.add(apollo);
+    const conrad = createKidCharacter('jacob-astronaut');
+    conrad.group.position.set(0.75, 0, 0.8);
+    conrad.group.scale.setScalar(0.82);
+    const bean = createKidCharacter('jacob-astronaut');
+    bean.group.position.set(1.55, 0, 0.95);
+    bean.group.scale.setScalar(0.78);
+    bean.group.rotation.y = 0.35;
+    group.add(conrad.group, bean.group);
+    const returnedPart = new THREE.Mesh(
+      new THREE.BoxGeometry(0.36, 0.22, 0.08),
+      new THREE.MeshStandardMaterial({ color: 0xc99b4b, metalness: 0.5, roughness: 0.4 }),
+    );
+    returnedPart.position.set(1.12, 1.75, 0.65);
+    group.add(returnedPart);
+    updateFn = (t, _delta, boost) => {
+      conrad.rightArm.rotation.z = 1.4 + Math.sin(t * 2.5) * 0.16 + boost * 0.25;
+      bean.leftArm.rotation.z = -1.35 - Math.sin(t * 2.5 + 0.5) * 0.16;
+      returnedPart.rotation.y = t * 0.7;
+      returnedPart.position.y = 1.72 + Math.sin(t * 2) * 0.08;
+    };
+  } else {
+    surveyor.group.position.set(0.15, 0, 0);
+    surveyor.group.scale.setScalar(0.88);
+    group.add(surveyor.group);
+    const earth = createEarth(maxAnisotropy);
+    earth.position.set(2.25, 2.25, -1.4);
+    earth.scale.setScalar(0.4);
+    group.add(earth);
+    const lily = createKidCharacter('lily');
+    lily.group.position.set(-2.0, 0, 0.8);
+    lily.group.scale.setScalar(0.86);
+    const jacob = createKidCharacter('jacob-casual');
+    jacob.group.position.set(-1.2, 0, 1.0);
+    jacob.group.scale.setScalar(0.82);
+    group.add(lily.group, jacob.group);
+    const star = createStarMesh(0xffe066, 0.18);
+    star.position.set(1.35, 2.0, 0.45);
+    group.add(star);
+    updateFn = (t, _delta, boost) => {
+      earth.rotation.y = t * 0.16;
+      surveyor.group.rotation.y = Math.sin(t * 0.7) * 0.1 + boost * Math.PI * 2;
+      star.rotation.y = t * 1.8;
+      star.scale.setScalar(0.9 + Math.sin(t * 3) * 0.12);
+    };
+  }
+
+  return {
+    group,
+    update: updateFn,
+    dispose: () => disposeDioramaGroup(group),
+  };
+}
+
+function isSurveyorScene(sceneId: StorySceneId): boolean {
+  return (
+    sceneId === 'meet-surveyor' ||
+    sceneId === 'mission' ||
+    sceneId === 'moon-work' ||
+    sceneId === 'signal-quiet' ||
+    sceneId === 'apollo-arrives' ||
+    sceneId === 'visitors' ||
+    sceneId === 'legacy'
+  );
+}
+
 export function buildStoryDiorama(
   sceneId: StorySceneId,
   maxAnisotropy = 4,
@@ -88,6 +426,10 @@ export function buildStoryDiorama(
       update: () => {},
       dispose: () => {},
     };
+  }
+
+  if (isSurveyorScene(sceneId)) {
+    return buildSurveyorDiorama(sceneId, maxAnisotropy);
   }
 
   const near: NearProbeRig = createNearProbe(maxAnisotropy);
