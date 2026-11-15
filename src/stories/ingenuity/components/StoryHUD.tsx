@@ -135,7 +135,7 @@ export function StoryHUD({
           onClick={() => setTopBarCollapsed((collapsed) => !collapsed)}
           aria-expanded={!topBarCollapsed}
           aria-controls="story-top-bar"
-          className="pointer-events-auto relative z-10 -mt-px self-end inline-flex items-center gap-1.5 rounded-b-lg border border-t-0 border-[#D5AC55]/25 bg-[#070914]/92 px-3 py-1 text-xs font-semibold text-slate-200 transition-colors hover:text-[#F3EDE0] hover:bg-[#0e1226] focus-visible:outline-2 focus-visible:outline-[#E8C574] cursor-pointer"
+          className="pointer-events-auto relative z-10 -mt-px self-end inline-flex items-center gap-1.5 rounded-lg border border-t-0 border-[#D5AC55]/25 bg-[#070914]/92 px-3 py-1 text-xs font-semibold text-slate-200 transition-colors hover:text-[#F3EDE0] hover:bg-[#0e1226] focus-visible:outline-2 focus-visible:outline-[#E8C574] cursor-pointer"
         >
           {topBarCollapsed ? (
             <>
@@ -156,8 +156,8 @@ export function StoryHUD({
         <button
           type="button"
           onClick={onToggleDock}
-          className={`pointer-events-auto relative z-10 mb-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-t-lg bg-[#070914]/92 border border-[#D5AC55]/25 text-xs font-semibold text-slate-200 hover:text-[#F3EDE0] hover:bg-[#0e1226] transition-colors focus-visible:outline-2 focus-visible:outline-[#E8C574] cursor-pointer ${
-            dockCollapsed ? 'border-b rounded-b-none' : 'border-b-0'
+          className={`pointer-events-auto relative z-10 mb-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#070914]/92 border border-[#D5AC55]/25 text-xs font-semibold text-slate-200 hover:text-[#F3EDE0] hover:bg-[#0e1226] transition-colors focus-visible:outline-2 focus-visible:outline-[#E8C574] cursor-pointer ${
+            dockCollapsed ? 'border-b' : 'border-b-0'
           }`}
         >
           {dockCollapsed ? (
