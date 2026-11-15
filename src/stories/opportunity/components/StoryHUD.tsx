@@ -114,7 +114,7 @@ export function StoryHUD({
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-start gap-x-2 gap-y-1">
           <BookOpen className="w-5 h-5 text-[#E8C574] shrink-0" aria-hidden="true" />
           <span className="font-story text-base sm:text-lg font-bold tracking-tight text-[#F3EDE0] whitespace-nowrap shrink-0">
-            Opportunity (MER-B)
+            ALSEP: Apollo Lunar Surface Experiments Package
           </span>
           <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-1 text-sm text-slate-200">
             <span className="font-story font-semibold text-[#F3EDE0]">
