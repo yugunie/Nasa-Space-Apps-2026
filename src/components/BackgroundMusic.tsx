@@ -97,7 +97,7 @@ export default function BackgroundMusic() {
         style={{
           position: "fixed",
           bottom: "24px",
-          right: "24px",
+          left: "24px",
           zIndex: 900,
           display: "flex",
           alignItems: "center",
