@@ -26,26 +26,49 @@ export function useBackgroundMusic() {
       );
     };
 
-    const resumeMusic = () => {
-      if (sessionStorage.getItem("nasaMusicOn") !== "false") {
-        audio.play()
-          .then(() => setPlaying(true))
-          .catch(() => {});
-      }
+    const syncPlaying = () => setPlaying(!audio.paused);
+
+    const removeUnlockListeners = () => {
+      window.removeEventListener("pointerdown", unlockMusic);
+      window.removeEventListener("keydown", unlockMusic);
     };
 
-    audio.addEventListener("timeupdate", saveTime);
-    window.addEventListener("pagehide", saveTime);
-    window.addEventListener("pointerdown", resumeMusic, {
-      once: true,
-    });
+    const tryAutoplay = () => {
+      if (sessionStorage.getItem("nasaMusicOn") === "false") return;
+      audio.play().then(removeUnlockListeners).catch(() => {});
+    };
 
-    resumeMusic();
+    // Browsers block autoplay until the user interacts with the page.
+    // Start the music on the first interaction, unless that interaction is
+    // the music button itself (its click handler takes care of toggling).
+    function unlockMusic(event: Event) {
+      const target = event.target as Element | null;
+      if (target?.closest?.("[data-music-toggle]")) {
+        removeUnlockListeners();
+        return;
+      }
+      if (audio && !audio.paused) {
+        removeUnlockListeners();
+        return;
+      }
+      tryAutoplay();
+    }
+
+    audio.addEventListener("timeupdate", saveTime);
+    audio.addEventListener("play", syncPlaying);
+    audio.addEventListener("pause", syncPlaying);
+    window.addEventListener("pagehide", saveTime);
+    window.addEventListener("pointerdown", unlockMusic);
+    window.addEventListener("keydown", unlockMusic);
+
+    tryAutoplay();
 
     return () => {
       audio.removeEventListener("timeupdate", saveTime);
+      audio.removeEventListener("play", syncPlaying);
+      audio.removeEventListener("pause", syncPlaying);
       window.removeEventListener("pagehide", saveTime);
-      window.removeEventListener("pointerdown", resumeMusic);
+      removeUnlockListeners();
     };
   }, []);
 
@@ -90,6 +113,7 @@ export default function BackgroundMusic() {
       />
       <button
         type="button"
+        data-music-toggle
         onClick={toggleMusic}
         aria-label={playing ? "Pause background music" : "Play background music"}
         aria-pressed={playing}
