@@ -256,8 +256,8 @@ export function StoryHUD({
                         ? 'bg-[#E8C574] text-[#050710] hover:bg-[#f1d592]'
                         : 'bg-white/10 text-[#F3EDE0] hover:bg-white/18'
                     }`}
-                    aria-label={soundEnabled ? 'Mute sound effects' : 'Unmute sound effects'}
-                    title={soundEnabled ? 'Sound Effects On' : 'Sound Effects Off'}
+                    aria-label={soundEnabled ? 'Mute sound and music' : 'Unmute sound and music'}
+                    title={soundEnabled ? 'Sound Effects and Music On' : 'Sound Effects and Music Off'}
                   >
                     <span className="relative flex h-4 w-4 items-center justify-center sm:h-5 sm:w-5">
                       <Volume2 className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />

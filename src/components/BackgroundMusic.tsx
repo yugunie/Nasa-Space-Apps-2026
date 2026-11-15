@@ -1,7 +1,7 @@
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-export default function BackgroundMusic() {
+export function useBackgroundMusic() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
 
@@ -49,24 +49,36 @@ export default function BackgroundMusic() {
     };
   }, []);
 
-  const toggleMusic = async () => {
+  const setMusicEnabled = useCallback(async (enabled: boolean) => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    if (!audio.paused) {
+    if (!enabled) {
       audio.pause();
       setPlaying(false);
       sessionStorage.setItem("nasaMusicOn", "false");
-    } else {
-      try {
-        await audio.play();
-        setPlaying(true);
-        sessionStorage.setItem("nasaMusicOn", "true");
-      } catch {
-        setPlaying(false);
-      }
+      return;
     }
-  };
+
+    try {
+      await audio.play();
+      setPlaying(true);
+      sessionStorage.setItem("nasaMusicOn", "true");
+    } catch {
+      setPlaying(false);
+    }
+  }, []);
+
+  const toggleMusic = useCallback(() => {
+    const audio = audioRef.current;
+    if (audio) void setMusicEnabled(audio.paused);
+  }, [setMusicEnabled]);
+
+  return { audioRef, playing, toggleMusic, setMusicEnabled };
+}
+
+export default function BackgroundMusic() {
+  const { audioRef, playing, toggleMusic } = useBackgroundMusic();
 
   return (
     <>
