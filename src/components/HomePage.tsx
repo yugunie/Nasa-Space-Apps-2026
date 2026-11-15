@@ -375,13 +375,13 @@ export default function HomePage() {
   const openArchive = (id: string) => {
     if (openingArchiveId) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      window.location.assign("/NASA-Space-Apps-2026/" + id + ".html");
+      window.location.assign("/" + id + ".html");
       return;
     }
 
     setOpeningArchiveId(id);
     window.setTimeout(() => {
-      window.location.assign("/NASA-Space-Apps-2026/" + id + ".html");
+      window.location.assign("/" + id + ".html");
       return;
 
       setOpeningArchiveId(null);
