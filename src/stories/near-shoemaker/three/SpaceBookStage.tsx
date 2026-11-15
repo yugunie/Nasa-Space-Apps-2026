@@ -4,7 +4,12 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { soundEngine } from '../audio/soundEngine';
 import { STORY_PAGES } from '../story/storyData';
-import { createBookShell, createEarth, type BookShellRig } from './models';
+import {
+  createBookShell,
+  createEarth,
+  createErosAsteroid,
+  type BookShellRig,
+} from './models';
 import { buildStoryDiorama, type ActiveDiorama } from './scenes';
 import {
   createAsteroidTexture,
@@ -13,7 +18,6 @@ import {
   createSpreadPageTexture,
 } from './textures';
 
-// Pre-allocated math helpers outside render loop (zero GC)
 const _dummy = new THREE.Object3D();
 const _color = new THREE.Color();
 const _targetCamPos = new THREE.Vector3(0, 4.3, 8.6);
@@ -43,7 +47,6 @@ export function SpaceBookStage({
   const mountRef = useRef<HTMLDivElement | null>(null);
   const [contextLost, setContextLost] = useState(false);
 
-  // Refs so React prop changes never recreate the WebGL canvas
   const desiredPageRef = useRef(pageIndex);
   const onOpenBookRef = useRef(onOpenBook);
   const onCloseBookRef = useRef(onCloseBook);
@@ -93,7 +96,6 @@ export function SpaceBookStage({
     const container = mountRef.current;
     if (!container) return;
 
-    // 1. Software WebGL probe (cost scaling only — identical scene & UI)
     const isSoftwareGl = (() => {
       const probe = document.createElement('canvas');
       const gl = probe.getContext('webgl2');
@@ -116,7 +118,7 @@ export function SpaceBookStage({
     renderer.setPixelRatio(isSoftwareGl ? 1 : Math.min(window.devicePixelRatio, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.02;
+    renderer.toneMappingExposure = 1.04;
     renderer.shadowMap.enabled = !isSoftwareGl;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
@@ -133,10 +135,10 @@ export function SpaceBookStage({
     renderer.domElement.addEventListener('webglcontextlost', handleContextLost);
     renderer.domElement.addEventListener('webglcontextrestored', handleContextRestored);
 
-    // 2. Scene, Fog & Studio Environment
+    // Deep cosmic violet night sky
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#040611');
-    scene.fog = new THREE.FogExp2('#040611', 0.012);
+    scene.background = new THREE.Color('#090414');
+    scene.fog = new THREE.FogExp2('#090414', 0.012);
 
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
     const roomEnv = new RoomEnvironment();
@@ -145,7 +147,6 @@ export function SpaceBookStage({
     roomEnv.dispose();
     pmremGenerator.dispose();
 
-    // 3. Camera & OrbitControls
     const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 150);
     camera.position.set(0, 4.1, 9.8);
 
@@ -165,11 +166,11 @@ export function SpaceBookStage({
       camResetActiveRef.current = false;
     });
 
-    // 4. Three-Point Cosmic Studio Lighting
-    const hemiLight = new THREE.HemisphereLight(0x94b8e8, 0x0e142e, 0.78);
+    // Warm key + lavender asteroid space studio lighting
+    const hemiLight = new THREE.HemisphereLight(0xe9d5ff, 0x160926, 0.82);
     scene.add(hemiLight);
 
-    const keyLight = new THREE.DirectionalLight(0xfff1d6, 1.55);
+    const keyLight = new THREE.DirectionalLight(0xfff1dc, 1.55);
     keyLight.position.set(5.5, 9.5, 6.5);
     keyLight.castShadow = !isSoftwareGl;
     keyLight.shadow.mapSize.width = 1024;
@@ -185,19 +186,18 @@ export function SpaceBookStage({
     keyLight.shadow.normalBias = 0.02;
     scene.add(keyLight);
 
-    const rimLight = new THREE.DirectionalLight(0x60a5fa, 0.9);
+    const rimLight = new THREE.DirectionalLight(0xc084fc, 0.85);
     rimLight.position.set(-6, 4.5, -7);
     scene.add(rimLight);
 
-    // 5. Instanced Starfield & Distant Nebula Sprites
+    // Instanced starfield
     const starCount = 520;
     const starGeo = new THREE.OctahedronGeometry(0.08, 0);
     const starMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
     const starsMesh = new THREE.InstancedMesh(starGeo, starMat, starCount);
-    const starPalette = [0xffffff, 0xffe066, 0x93c5fd, 0xfbcfe8, 0xa7f3d0];
+    const starPalette = [0xffffff, 0xffe066, 0xffb4a2, 0x93c5fd, 0xfde68a];
 
     for (let i = 0; i < starCount; i++) {
-      // Distribute in outer sphere shell, keeping center clear
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(2 * Math.random() - 1);
       const radius = 20 + Math.random() * 36;
@@ -219,14 +219,13 @@ export function SpaceBookStage({
     starsMesh.computeBoundingSphere();
     scene.add(starsMesh);
 
-    // Subtle far side nebula accents (deep luxury indigo/plum, kept clear of center text)
     const glowTex = createGlowSpriteTexture();
     const nebulaLeft = new THREE.Sprite(
       new THREE.SpriteMaterial({
         map: glowTex,
-        color: 0x162c6e,
+        color: 0x1e3a8a,
         transparent: true,
-        opacity: 0.22,
+        opacity: 0.2,
         depthWrite: false,
       }),
     );
@@ -237,9 +236,9 @@ export function SpaceBookStage({
     const nebulaRight = new THREE.Sprite(
       new THREE.SpriteMaterial({
         map: glowTex,
-        color: 0x3f1f6e,
+        color: 0x581c87,
         transparent: true,
-        opacity: 0.2,
+        opacity: 0.28,
         depthWrite: false,
       }),
     );
@@ -247,150 +246,62 @@ export function SpaceBookStage({
     nebulaRight.scale.set(20, 15, 1);
     scene.add(nebulaRight);
 
-    // Side & front-flank nebulae so side-angle views feel rich and cosmic too
-    const nebulaSideLeft = new THREE.Sprite(
-      new THREE.SpriteMaterial({
-        map: glowTex,
-        color: 0x0e4366,
-        transparent: true,
-        opacity: 0.16,
-        depthWrite: false,
-      }),
-    );
-    nebulaSideLeft.position.set(-22, 1, 5);
-    nebulaSideLeft.scale.set(20, 16, 1);
-    scene.add(nebulaSideLeft);
-
-    const nebulaSideRight = new THREE.Sprite(
-      new THREE.SpriteMaterial({
-        map: glowTex,
-        color: 0x5c1d45,
-        transparent: true,
-        opacity: 0.15,
-        depthWrite: false,
-      }),
-    );
-    nebulaSideRight.position.set(22, 2, 6);
-    nebulaSideRight.scale.set(19, 15, 1);
-    scene.add(nebulaSideRight);
-
-    // 5b. Surrounding Cosmic Environment (Earth + Moon, Ringed Planet, & 2 Asteroids)
+    // Backstage cosmic environment: Earth (left) & Asteroid Eros (right)
     const backstageGroup = new THREE.Group();
     scene.add(backstageGroup);
 
-    // Floating Earth with orbiting Moon on the left cosmic flank (visible front & side)
     const bgEarth = createEarth(maxAnisotropy);
-    bgEarth.position.set(-11.2, 2.8, -6.2);
-    bgEarth.scale.setScalar(2.15);
-    const bgEarthStand = bgEarth.children[bgEarth.children.length - 1];
-    if (bgEarthStand) bgEarth.remove(bgEarthStand);
+    bgEarth.position.set(-11.4, 2.7, -6.0);
+    bgEarth.scale.setScalar(1.9);
     backstageGroup.add(bgEarth);
 
-    const bgMoon = new THREE.Mesh(
-      new THREE.SphereGeometry(0.4, 18, 18),
-      new THREE.MeshStandardMaterial({ color: 0xcbd5e1, roughness: 0.92, metalness: 0.02 }),
-    );
-    backstageGroup.add(bgMoon);
+    const bgEros = createErosAsteroid(maxAnisotropy);
+    bgEros.group.position.set(11.4, 3.2, -5.0);
+    bgEros.group.scale.setScalar(2.15);
+    backstageGroup.add(bgEros.group);
 
-    // Floating Ringed Planet on the right cosmic flank (visible front & side)
-    const ringedPlanet = new THREE.Group();
-    ringedPlanet.position.set(11.6, 2.9, -4.5);
-    ringedPlanet.rotation.set(0.28, 0, -0.32);
-    const gasBody = new THREE.Mesh(
-      new THREE.SphereGeometry(1.38, 28, 28),
-      new THREE.MeshStandardMaterial({
-        color: 0x4b568c,
-        roughness: 0.78,
-        metalness: 0.06,
-        envMapIntensity: 0.25,
-      }),
+    const tinyRocklet = new THREE.Mesh(
+      new THREE.DodecahedronGeometry(0.32, 0),
+      new THREE.MeshStandardMaterial({ color: 0x78716c, roughness: 0.9, flatShading: true }),
     );
-    const planetRing = new THREE.Mesh(
-      new THREE.RingGeometry(1.85, 2.7, 48),
-      new THREE.MeshStandardMaterial({
-        color: 0xcab082,
-        transparent: true,
-        opacity: 0.58,
-        roughness: 0.85,
-        side: THREE.DoubleSide,
-      }),
-    );
-    planetRing.rotation.x = Math.PI / 2;
-    ringedPlanet.add(gasBody, planetRing);
-    backstageGroup.add(ringedPlanet);
+    backstageGroup.add(tinyRocklet);
 
-    // Just 2 sculpted floating asteroids positioned on left & right flanks for side views
-    const bgAsteroidTex = createAsteroidTexture('#7A7385', '#504A59', maxAnisotropy);
-    const bgAsteroidGeo = new THREE.IcosahedronGeometry(0.75, 1);
-    const bgPos = bgAsteroidGeo.attributes.position;
-    for (let i = 0; i < bgPos.count; i++) {
-      const vx = bgPos.getX(i);
-      const vy = bgPos.getY(i);
-      const vz = bgPos.getZ(i);
-      const lump = 1 + 0.16 * Math.sin(vx * 5 + vy * 3) + 0.1 * Math.cos(vz * 4);
-      bgPos.setXYZ(i, vx * 1.2 * lump, vy * 0.85 * lump, vz * lump);
-    }
-    bgAsteroidGeo.computeVertexNormals();
-
-    const bgAsteroidMat = new THREE.MeshStandardMaterial({
-      map: bgAsteroidTex,
-      roughness: 0.94,
+    const asteroidRockTex = createAsteroidTexture('#7A7067', '#4B433C', maxAnisotropy);
+    const asteroidRockGeo = new THREE.IcosahedronGeometry(0.75, 1);
+    const asteroidRockMat = new THREE.MeshStandardMaterial({
+      map: asteroidRockTex,
+      roughness: 0.92,
       metalness: 0.04,
-      envMapIntensity: 0.2,
       flatShading: true,
     });
 
-    interface BgAsteroidMeta {
-      mesh: THREE.Mesh;
-      baseX: number;
-      baseY: number;
-      baseZ: number;
-      speedX: number;
-      speedY: number;
-      floatPhase: number;
-    }
-    const bgAsteroids: BgAsteroidMeta[] = [];
-    const asteroidPlacements: [number, number, number, number][] = [
-      [-9.0, -1.2, 4.6, 0.95],
-      [9.4, 0.8, 4.8, 1.05],
+    const sideRocks = [
+      { mesh: new THREE.Mesh(asteroidRockGeo, asteroidRockMat), baseY: -1.1, phase: 0 },
+      { mesh: new THREE.Mesh(asteroidRockGeo, asteroidRockMat), baseY: 0.9, phase: 2.1 },
     ];
+    sideRocks[0].mesh.position.set(-9.2, -1.1, 4.4);
+    sideRocks[0].mesh.scale.setScalar(0.9);
+    sideRocks[1].mesh.position.set(9.4, 0.9, 4.6);
+    sideRocks[1].mesh.scale.setScalar(1.0);
+    sideRocks.forEach((r) => backstageGroup.add(r.mesh));
 
-    asteroidPlacements.forEach(([ax, ay, az, ascale], idx) => {
-      const rock = new THREE.Mesh(bgAsteroidGeo, bgAsteroidMat);
-      rock.position.set(ax, ay, az);
-      rock.scale.setScalar(ascale);
-      rock.rotation.set(idx * 0.7, idx * 1.1, idx * 0.4);
-      backstageGroup.add(rock);
-      bgAsteroids.push({
-        mesh: rock,
-        baseX: ax,
-        baseY: ay,
-        baseZ: az,
-        speedX: 0.16 + idx * 0.06,
-        speedY: 0.22 + idx * 0.05,
-        floatPhase: idx * 1.8,
-      });
-    });
-
-    // 6. Floating 3D Book Assembly
+    // Floating 3D Book Assembly
     const floatGroup = new THREE.Group();
     scene.add(floatGroup);
 
     const bookRig: BookShellRig = createBookShell(maxAnisotropy);
     floatGroup.add(bookRig.root);
 
-    // Diorama mount point on top of the open book surface
     const dioramaAnchor = new THREE.Group();
     dioramaAnchor.position.set(0, 0.24, 0.35);
     bookRig.root.add(dioramaAnchor);
 
-    // State for animated page transitions & 90° pop-up fold
     let activePageIdx = desiredPageRef.current;
     let activeDiorama: ActiveDiorama | null = null;
-    let flipProgress = 1; // 1 = settled
+    let flipProgress = 1;
     let flipDirection: 1 | -1 = 1;
     let pendingPageIdx: number | null = null;
-    let popupFoldAmount = activePageIdx === 0 ? 0 : 1; // 0 = folded flat, 1 = upright 90°!
+    let popupFoldAmount = activePageIdx === 0 ? 0 : 1;
 
     const applyPageContent = (idx: number) => {
       const page = STORY_PAGES[idx] ?? STORY_PAGES[0];
@@ -418,12 +329,10 @@ export function SpaceBookStage({
 
     applyPageContent(activePageIdx);
 
-    // Pre-warm shaders on GPU
     if (!isSoftwareGl) {
       renderer.compile(scene, camera);
     }
 
-    // 7. Interactive Click / Tap Raycasting (Open/Close, Flip Pages, Scene Actions)
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
     let downX = 0;
@@ -437,7 +346,7 @@ export function SpaceBookStage({
     const onPointerUp = (e: PointerEvent) => {
       const dx = e.clientX - downX;
       const dy = e.clientY - downY;
-      if (dx * dx + dy * dy > 36) return; // Ignore orbit drags
+      if (dx * dx + dy * dy > 36) return;
       if (pendingPageIdx !== null || desiredPageRef.current !== activePageIdx) return;
 
       const rect = renderer.domElement.getBoundingClientRect();
@@ -485,7 +394,6 @@ export function SpaceBookStage({
     renderer.domElement.addEventListener('pointerdown', onPointerDown);
     renderer.domElement.addEventListener('pointerup', onPointerUp);
 
-    // Hover cursor feedback (throttled)
     let lastHoverCheck = 0;
     const onPointerMove = (e: PointerEvent) => {
       const now = performance.now();
@@ -506,7 +414,6 @@ export function SpaceBookStage({
     };
     renderer.domElement.addEventListener('pointermove', onPointerMove);
 
-    // 8. Resize handling
     const onResize = () => {
       if (!container) return;
       const w = container.clientWidth || window.innerWidth;
@@ -517,7 +424,6 @@ export function SpaceBookStage({
     };
     window.addEventListener('resize', onResize);
 
-    // 9. Animation & Software-WebGL Pacing Loop
     const clock = new THREE.Clock();
     let frameId = 0;
     let disposed = false;
@@ -544,17 +450,15 @@ export function SpaceBookStage({
       const delta = Math.min(clock.getDelta(), 0.05);
       const elapsed = clock.getElapsedTime();
 
-      // Check for requested page transition
       const desired = desiredPageRef.current;
       if (desired !== activePageIdx && pendingPageIdx === null) {
         if (activePageIdx === 0 || desired === 0) {
-          // Opening from cover or closing back to cover
           activePageIdx = desired;
           applyPageContent(activePageIdx);
           popupFoldAmount = 0;
           camResetActiveRef.current = true;
         } else {
-          // Flipping between open pages!
+          pendingPageIdx = desired;
           flipDirection = desired > activePageIdx ? 1 : -1;
           const currentPage = STORY_PAGES[activePageIdx] ?? STORY_PAGES[0];
           bookRig.setFlippingPageTexture(
@@ -564,18 +468,15 @@ export function SpaceBookStage({
               maxAnisotropy,
             ),
           );
-          pendingPageIdx = desired;
           flipProgress = 0;
           bookRig.flippingPageGroup.visible = true;
         }
       }
 
-      // Advance page-flip curl animation
       if (pendingPageIdx !== null) {
         flipProgress = Math.min(1, flipProgress + delta * 1.9);
         bookRig.updateFlipCurl(flipProgress, flipDirection);
 
-        // Swap scene & 90° pop-up text cleanly at midpoint of page turn
         if (flipProgress >= 0.48 && activePageIdx !== pendingPageIdx) {
           activePageIdx = pendingPageIdx;
           applyPageContent(activePageIdx);
@@ -588,7 +489,6 @@ export function SpaceBookStage({
         }
       }
 
-      // Smoothly damp book pose: upright/tilted when closed cover, lying open when reading!
       const isClosed = activePageIdx === 0;
       const targetCoverAngle = isClosed ? 0 : Math.PI;
       const targetBookX = isClosed ? -2.35 : 0;
@@ -613,53 +513,46 @@ export function SpaceBookStage({
         delta,
       );
 
-      // Gentle space-float bobbing
       floatGroup.position.y = Math.sin(elapsed * 0.9) * 0.1;
       floatGroup.rotation.z = Math.sin(elapsed * 0.55) * 0.018;
 
-      // 90-Degree Pop-Up Spring Fold (folds flat -PI/2 during flip, stands crisp 90° = 0 when open!)
       const targetFold = isClosed || pendingPageIdx !== null ? 0 : 1;
       popupFoldAmount = THREE.MathUtils.damp(popupFoldAmount, targetFold, 8.5, delta);
 
-      // Pop-up text stands perpendicular (90 deg to horizontal book page!)
       bookRig.popupTextPivot.rotation.x = THREE.MathUtils.lerp(-Math.PI / 2, 0, popupFoldAmount);
       bookRig.popupTextPivot.scale.setScalar(Math.max(0.001, popupFoldAmount));
 
-      // Pop-up 3D diorama springs up from the page surface too
       dioramaAnchor.scale.y = Math.max(0.001, popupFoldAmount);
       dioramaAnchor.scale.x = 0.85 + 0.15 * popupFoldAmount;
       dioramaAnchor.scale.z = 0.85 + 0.15 * popupFoldAmount;
 
-      // Decay interactive action boost
       actionBoostRef.current = THREE.MathUtils.damp(actionBoostRef.current, 0, 4.2, delta);
 
       if (activeDiorama) {
         activeDiorama.update(elapsed, delta, actionBoostRef.current);
       }
 
-      // Slowly drift cosmos starfield & backstage planets/asteroids
       starsMesh.rotation.y = elapsed * 0.018;
       starsMesh.rotation.x = Math.sin(elapsed * 0.01) * 0.04;
 
       bgEarth.rotation.y = elapsed * 0.12;
-      bgEarth.position.y = 2.8 + Math.sin(elapsed * 0.45) * 0.18;
-      bgMoon.position.set(
-        bgEarth.position.x + Math.cos(elapsed * 0.35) * 2.8,
-        bgEarth.position.y + 1.3 + Math.sin(elapsed * 0.35) * 0.5,
-        bgEarth.position.z + Math.sin(elapsed * 0.35) * 2.2,
+      bgEarth.position.y = 2.7 + Math.sin(elapsed * 0.45) * 0.16;
+
+      bgEros.group.rotation.y = elapsed * 0.18;
+      bgEros.group.position.y = 3.2 + Math.cos(elapsed * 0.4) * 0.16;
+      tinyRocklet.position.set(
+        bgEros.group.position.x + Math.cos(elapsed * 0.5) * 2.9,
+        bgEros.group.position.y + 1.0 + Math.sin(elapsed * 0.5) * 0.4,
+        bgEros.group.position.z + Math.sin(elapsed * 0.5) * 2.2,
       );
+      tinyRocklet.rotation.y += delta * 0.6;
 
-      ringedPlanet.rotation.y = elapsed * 0.16;
-      ringedPlanet.position.y = 2.9 + Math.cos(elapsed * 0.4) * 0.16;
-
-      for (let i = 0; i < bgAsteroids.length; i++) {
-        const a = bgAsteroids[i];
-        a.mesh.rotation.x += delta * a.speedX;
-        a.mesh.rotation.y += delta * a.speedY;
-        a.mesh.position.y = a.baseY + Math.sin(elapsed * 0.55 + a.floatPhase) * 0.24;
+      for (const r of sideRocks) {
+        r.mesh.rotation.x += delta * 0.18;
+        r.mesh.rotation.y += delta * 0.24;
+        r.mesh.position.y = r.baseY + Math.sin(elapsed * 0.55 + r.phase) * 0.22;
       }
 
-      // Smooth scripted camera reset if requested
       if (camResetActiveRef.current) {
         _targetCamPos.set(0, isClosed ? 3.1 : 4.7, isClosed ? 9.6 : 10.6);
         _targetLookAt.set(0, isClosed ? 0.15 : 0.95, -0.25);
@@ -693,13 +586,14 @@ export function SpaceBookStage({
       renderer.domElement.removeEventListener('webglcontextlost', handleContextLost);
       renderer.domElement.removeEventListener('webglcontextrestored', handleContextRestored);
 
-      if (activeDiorama) activeDiorama.dispose();
       bookRig.setFlippingPageTexture(null);
+      if (activeDiorama) activeDiorama.dispose();
+      bgEros.dispose();
       envTex.dispose();
       glowTex.dispose();
-      bgAsteroidTex.dispose();
-      bgAsteroidGeo.dispose();
-      bgAsteroidMat.dispose();
+      asteroidRockTex.dispose();
+      asteroidRockGeo.dispose();
+      asteroidRockMat.dispose();
       starGeo.dispose();
       starMat.dispose();
       controls.dispose();
@@ -714,13 +608,13 @@ export function SpaceBookStage({
     <div className="relative w-full h-full">
       <div ref={mountRef} className="w-full h-full" />
       {contextLost && (
-        <div className="absolute inset-0 flex items-center justify-center bg-[#06091a]/95 text-center p-6 z-30">
+        <div className="absolute inset-0 flex items-center justify-center bg-[#090414]/95 text-center p-6 z-30">
           <div className="max-w-md space-y-2">
             <h2 className="font-story text-2xl font-bold text-[#FFE066]">
-              Restoring Space View...
+              Restoring Asteroid View...
             </h2>
             <p className="text-sm text-slate-200">
-              Your 3D cosmic storybook is reconnecting to graphics memory.
+              Your 3D NEAR Shoemaker storybook is reconnecting to graphics memory.
             </p>
           </div>
         </div>

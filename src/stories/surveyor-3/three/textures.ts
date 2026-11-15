@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { PopupLine, StoryPage } from '../story/storyData';
 
-export type NearMood = 'normal' | 'happy' | 'shocked' | 'crying' | 'smug' | 'sleeping';
+export type RobotMood = 'normal' | 'happy' | 'curious' | 'sleepy' | 'amazed' | 'proud';
 
 function configureColorTexture(
   canvas: HTMLCanvasElement,
@@ -14,11 +14,6 @@ function configureColorTexture(
   return tex;
 }
 
-/**
- * Renders 90-degree upright pop-up story text onto a 100% transparent canvas.
- * Zero background box behind the text — uses a bold dark outline + shadow
- * so high-contrast letters stay razor-sharp against deep space.
- */
 export function createPopupTextTexture(
   lines: PopupLine[],
   maxAnisotropy = 4,
@@ -29,7 +24,6 @@ export function createPopupTextTexture(
   const ctx = canvas.getContext('2d')!;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Word-wrap each PopupLine cleanly so text never overflows
   const wrappedEntries: { text: string; color: string; fontSize: number }[] = [];
   const maxWidth = canvas.width - 180;
 
@@ -61,7 +55,6 @@ export function createPopupTextTexture(
     }
   }
 
-  // Compute total vertical height to bottom-align gently above the book crease
   const lineGap = 24;
   const totalHeight = wrappedEntries.reduce(
     (sum, item, idx) => sum + item.fontSize * 1.12 + (idx > 0 ? lineGap : 0),
@@ -77,23 +70,20 @@ export function createPopupTextTexture(
   for (const entry of wrappedEntries) {
     ctx.font = `700 ${entry.fontSize}px "Fredoka", "Plus Jakarta Sans", sans-serif`;
 
-    // Thick high-contrast dark outline (no box background)
     ctx.save();
-    ctx.shadowColor = 'rgba(3, 6, 20, 0.96)';
+    ctx.shadowColor = 'rgba(4, 10, 24, 0.96)';
     ctx.shadowBlur = 22;
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 6;
-    ctx.strokeStyle = '#050819';
+    ctx.strokeStyle = '#061024';
     ctx.lineWidth = Math.max(18, Math.round(entry.fontSize * 0.22));
     ctx.strokeText(entry.text, canvas.width / 2, y);
     ctx.restore();
 
-    // Crisp second stroke for clean edge separation
-    ctx.strokeStyle = '#0B1230';
+    ctx.strokeStyle = '#0C1B3A';
     ctx.lineWidth = Math.max(10, Math.round(entry.fontSize * 0.12));
     ctx.strokeText(entry.text, canvas.width / 2, y);
 
-    // Bright luminous fill
     ctx.fillStyle = entry.color;
     ctx.fillText(entry.text, canvas.width / 2, y);
 
@@ -113,16 +103,16 @@ export function createCoverTexture(maxAnisotropy = 4): THREE.CanvasTexture {
   canvas.height = 1280;
   const ctx = canvas.getContext('2d')!;
 
-  // Deep, luxurious midnight dark-blue leather gradient
-  const grad = ctx.createRadialGradient(512, 560, 80, 512, 640, 820);
-  grad.addColorStop(0, '#132044');
-  grad.addColorStop(0.55, '#0C1633');
-  grad.addColorStop(1, '#070D20');
+  // Rich dark blue leather book cover gradient
+  const grad = ctx.createRadialGradient(512, 560, 80, 512, 640, 840);
+  grad.addColorStop(0, '#143266');
+  grad.addColorStop(0.55, '#0B1E42');
+  grad.addColorStop(1, '#050F26');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, 1024, 1280);
 
-  // Fine dark bookcloth / leather grain
-  ctx.fillStyle = 'rgba(255, 240, 200, 0.016)';
+  // Fine dark bookcloth grain
+  ctx.fillStyle = 'rgba(220, 235, 255, 0.02)';
   for (let i = 0; i < 1280; i += 6) {
     ctx.fillRect(0, i, 1024, 1);
   }
@@ -130,11 +120,11 @@ export function createCoverTexture(maxAnisotropy = 4): THREE.CanvasTexture {
     ctx.fillRect(i, 0, 1, 1280);
   }
 
-  // Subtle warm champagne-gold aura behind central medallion
-  const glow = ctx.createRadialGradient(512, 690, 30, 512, 690, 340);
-  glow.addColorStop(0, 'rgba(213, 172, 85, 0.14)');
-  glow.addColorStop(0.55, 'rgba(130, 155, 210, 0.06)');
-  glow.addColorStop(1, 'rgba(4, 5, 12, 0)');
+  // Soft moonlit sapphire glow behind central Moon medallion
+  const glow = ctx.createRadialGradient(512, 700, 30, 512, 700, 340);
+  glow.addColorStop(0, 'rgba(124, 232, 255, 0.16)');
+  glow.addColorStop(0.55, 'rgba(232, 197, 116, 0.09)');
+  glow.addColorStop(1, 'rgba(5, 12, 30, 0)');
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, 1024, 1280);
 
@@ -164,17 +154,17 @@ export function createCoverTexture(maxAnisotropy = 4): THREE.CanvasTexture {
     ctx.fill();
   }
 
-  // Decorative orbital rings around medallion
+  // Decorative lunar orbit rings around medallion
   ctx.save();
-  ctx.translate(512, 690);
-  ctx.strokeStyle = 'rgba(213, 172, 85, 0.42)';
+  ctx.translate(512, 700);
+  ctx.strokeStyle = 'rgba(213, 172, 85, 0.48)';
   ctx.lineWidth = 2.5;
   ctx.beginPath();
-  ctx.ellipse(0, 0, 265, 160, -0.25, 0, Math.PI * 2);
+  ctx.ellipse(0, 0, 265, 160, -0.22, 0, Math.PI * 2);
   ctx.stroke();
 
   ctx.setLineDash([10, 10]);
-  ctx.strokeStyle = 'rgba(186, 204, 232, 0.35)';
+  ctx.strokeStyle = 'rgba(186, 230, 253, 0.35)';
   ctx.beginPath();
   ctx.ellipse(0, 0, 310, 195, 0.2, 0, Math.PI * 2);
   ctx.stroke();
@@ -190,7 +180,7 @@ export function createCoverTexture(maxAnisotropy = 4): THREE.CanvasTexture {
     [160, 530, 6],
     [860, 520, 6],
   ];
-  ctx.fillStyle = '#E6C67A';
+  ctx.fillStyle = '#E8C574';
   for (const [sx, sy, sr] of stars) {
     ctx.beginPath();
     ctx.moveTo(sx, sy - sr * 1.6);
@@ -205,27 +195,26 @@ export function createCoverTexture(maxAnisotropy = 4): THREE.CanvasTexture {
     ctx.fill();
   }
 
-  // Cover Title Typography in champagne gold & warm ivory
+  // Cover Title Typography
   ctx.textAlign = 'center';
   ctx.fillStyle = '#E8C574';
-  ctx.font = '700 96px "Fredoka", sans-serif';
-  ctx.fillText('Surveyor 3', 512, 300);
-  ctx.font = '700 48px "Fredoka", sans-serif';
-  ctx.fillStyle = '#F3EDE0';
-  ctx.fillText('The Little Robot Who', 512, 390);
-  ctx.fillText('Waited for Visitors', 512, 448);
+  ctx.font = '700 102px "Fredoka", sans-serif';
+  ctx.fillText('SURVEYOR 3', 512, 286);
 
-  // Subtitle
-  ctx.fillStyle = '#A8B9D6';
-  ctx.font = '600 32px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText('A Moon Adventure', 512, 510);
+  ctx.font = '700 42px "Fredoka", sans-serif';
+  ctx.fillStyle = '#F7EFE6';
+  ctx.fillText('The Little Robot Who', 512, 376);
+  ctx.fillText('Waited for Visitors', 512, 430);
 
-  // Bottom author line
-  ctx.fillStyle = '#D5AC55';
-  ctx.font = '600 30px "Fredoka", sans-serif';
-  ctx.fillText('A story about discovery and helping', 512, 1110);
+  ctx.fillStyle = '#93C5FD';
+  ctx.font = '600 28px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('A 3D Moon Pop-Up Adventure', 512, 488);
 
-  ctx.fillStyle = 'rgba(243, 237, 224, 0.72)';
+  ctx.fillStyle = '#E8C574';
+  ctx.font = '600 32px "Fredoka", sans-serif';
+  ctx.fillText('Narrated by Lily', 512, 1110);
+
+  ctx.fillStyle = 'rgba(247, 239, 230, 0.78)';
   ctx.font = '600 22px "Plus Jakarta Sans", sans-serif';
   ctx.fillText('CLICK TO OPEN BOOK', 512, 1168);
 
@@ -238,7 +227,7 @@ export function createBackCoverTexture(maxAnisotropy = 4): THREE.CanvasTexture {
   canvas.height = 640;
   const ctx = canvas.getContext('2d')!;
 
-  ctx.fillStyle = '#0A122B';
+  ctx.fillStyle = '#081736';
   ctx.fillRect(0, 0, 512, 640);
   ctx.strokeStyle = '#D5AC55';
   ctx.lineWidth = 5;
@@ -247,9 +236,6 @@ export function createBackCoverTexture(maxAnisotropy = 4): THREE.CanvasTexture {
   return configureColorTexture(canvas, maxAnisotropy);
 }
 
-/**
- * Creates a subdued starfield spread texture so 3D animations and pop-up text stay legible.
- */
 export function createSpreadPageTexture(
   side: 'left' | 'right',
   page: StoryPage,
@@ -360,7 +346,6 @@ export function createSpreadPageTexture(
   ctx.stroke();
   ctx.restore();
 
-  // Subtle corner dots
   ctx.fillStyle = 'rgba(226, 232, 240, 0.25)';
   const pts = [
     [130, 140],
@@ -374,7 +359,6 @@ export function createSpreadPageTexture(
     ctx.fill();
   }
 
-  // Crisp soft-silver chapter label & page number at bottom margin
   ctx.fillStyle = '#CBD2DF';
   ctx.font = '600 26px "Fredoka", sans-serif';
   if (side === 'left') {
@@ -388,8 +372,8 @@ export function createSpreadPageTexture(
   return configureColorTexture(canvas, maxAnisotropy);
 }
 
-export function createVisorTexture(
-  mood: NearMood,
+export function createRobotFaceTexture(
+  mood: RobotMood,
   maxAnisotropy = 4,
 ): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
@@ -397,11 +381,9 @@ export function createVisorTexture(
   canvas.height = 256;
   const ctx = canvas.getContext('2d')!;
 
-  // Dark sleek digital visor glass
-  ctx.fillStyle = '#0B132B';
+  ctx.fillStyle = '#0B1324';
   ctx.fillRect(0, 0, 512, 256);
 
-  // Subtle scanlines
   ctx.fillStyle = 'rgba(124, 232, 255, 0.06)';
   for (let y = 0; y < 256; y += 8) {
     ctx.fillRect(0, y, 512, 2);
@@ -412,10 +394,10 @@ export function createVisorTexture(
 
   const leftX = 166;
   const rightX = 346;
-  const eyeY = 118;
+  const eyeY = 114;
 
   if (mood === 'normal') {
-    ctx.fillStyle = '#6CF0FF';
+    ctx.fillStyle = '#7CE8FF';
     ctx.beginPath();
     ctx.arc(leftX, eyeY, 34, 0, Math.PI * 2);
     ctx.arc(rightX, eyeY, 34, 0, Math.PI * 2);
@@ -425,97 +407,94 @@ export function createVisorTexture(
     ctx.arc(leftX - 10, eyeY - 10, 11, 0, Math.PI * 2);
     ctx.arc(rightX - 10, eyeY - 10, 11, 0, Math.PI * 2);
     ctx.fill();
-    // Cute small smile
-    ctx.strokeStyle = '#6CF0FF';
+    ctx.strokeStyle = '#7CE8FF';
     ctx.lineWidth = 10;
     ctx.beginPath();
     ctx.arc(256, 152, 34, 0.2, Math.PI - 0.2);
     ctx.stroke();
   } else if (mood === 'happy') {
-    ctx.strokeStyle = '#7DFF9B';
+    ctx.strokeStyle = '#80FFDB';
     ctx.lineWidth = 18;
-    // Happy curved ^ ^ eyes
     ctx.beginPath();
     ctx.arc(leftX, eyeY + 14, 34, Math.PI + 0.3, -0.3);
     ctx.stroke();
     ctx.beginPath();
     ctx.arc(rightX, eyeY + 14, 34, Math.PI + 0.3, -0.3);
     ctx.stroke();
-    // Big joyful smile
-    ctx.fillStyle = '#7DFF9B';
+    ctx.fillStyle = '#80FFDB';
     ctx.beginPath();
     ctx.arc(256, 152, 42, 0, Math.PI);
     ctx.fill();
-    // Rosy digital cheeks
-    ctx.fillStyle = 'rgba(255, 128, 171, 0.65)';
+    ctx.fillStyle = 'rgba(255, 138, 170, 0.72)';
     ctx.beginPath();
     ctx.arc(105, 165, 18, 0, Math.PI * 2);
     ctx.arc(407, 165, 18, 0, Math.PI * 2);
     ctx.fill();
-  } else if (mood === 'shocked') {
-    ctx.strokeStyle = '#FFE066';
-    ctx.lineWidth = 14;
-    ctx.beginPath();
-    ctx.arc(leftX, eyeY - 6, 40, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(rightX, eyeY - 6, 40, 0, Math.PI * 2);
-    ctx.stroke();
+  } else if (mood === 'curious') {
     ctx.fillStyle = '#FFE066';
     ctx.beginPath();
-    ctx.arc(leftX, eyeY - 6, 13, 0, Math.PI * 2);
-    ctx.arc(rightX, eyeY - 6, 13, 0, Math.PI * 2);
+    ctx.arc(leftX, eyeY, 30, 0, Math.PI * 2);
+    ctx.arc(rightX, eyeY - 4, 36, 0, Math.PI * 2);
     ctx.fill();
-    // Surprised 'O' mouth
-    ctx.strokeStyle = '#FF8A80';
-    ctx.lineWidth = 12;
+    ctx.fillStyle = '#FFFFFF';
     ctx.beginPath();
-    ctx.ellipse(256, 182, 20, 28, 0, 0, Math.PI * 2);
-    ctx.stroke();
-  } else if (mood === 'crying') {
-    // Sad slanted eyes + tear trails
-    ctx.strokeStyle = '#80D8FF';
-    ctx.lineWidth = 15;
-    ctx.beginPath();
-    ctx.moveTo(leftX - 30, eyeY + 12);
-    ctx.lineTo(leftX + 26, eyeY - 12);
-    ctx.moveTo(rightX + 30, eyeY + 12);
-    ctx.lineTo(rightX - 26, eyeY - 12);
-    ctx.stroke();
-    // Teardrop streams
-    ctx.fillStyle = '#40C4FF';
-    ctx.fillRect(leftX - 10, eyeY + 18, 18, 95);
-    ctx.fillRect(rightX - 8, eyeY + 18, 18, 95);
-    // Wobbly frown
-    ctx.strokeStyle = '#80D8FF';
+    ctx.arc(leftX - 8, eyeY - 10, 10, 0, Math.PI * 2);
+    ctx.arc(rightX - 8, eyeY - 14, 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#FFE066';
     ctx.lineWidth = 11;
     ctx.beginPath();
-    ctx.arc(256, 198, 32, Math.PI + 0.35, -0.35);
+    ctx.arc(256, 174, 18, 0, Math.PI * 2);
     ctx.stroke();
-  } else if (mood === 'smug') {
-    // Confident smirk + sparkling eyes (shades sit in front of visor)
-    ctx.fillStyle = '#FFE066';
-    ctx.beginPath();
-    ctx.arc(leftX, eyeY, 26, 0, Math.PI * 2);
-    ctx.arc(rightX, eyeY, 26, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#FFE066';
-    ctx.lineWidth = 13;
-    ctx.beginPath();
-    ctx.arc(262, 148, 44, 0.25, Math.PI - 0.55);
-    ctx.stroke();
-  } else if (mood === 'sleeping') {
-    ctx.strokeStyle = '#A0C4FF';
+  } else if (mood === 'sleepy') {
+    // Peaceful resting eyes while waiting on the Moon
+    ctx.strokeStyle = '#93C5FD';
     ctx.lineWidth = 14;
     ctx.beginPath();
-    ctx.arc(leftX, eyeY + 6, 30, 0.2, Math.PI - 0.2);
+    ctx.arc(leftX, eyeY + 8, 30, 0.25, Math.PI - 0.25);
     ctx.stroke();
     ctx.beginPath();
-    ctx.arc(rightX, eyeY + 6, 30, 0.2, Math.PI - 0.2);
+    ctx.arc(rightX, eyeY + 8, 30, 0.25, Math.PI - 0.25);
+    ctx.stroke();
+    ctx.strokeStyle = '#93C5FD';
+    ctx.lineWidth = 9;
+    ctx.beginPath();
+    ctx.arc(256, 172, 22, 0.2, Math.PI - 0.2);
+    ctx.stroke();
+    ctx.fillStyle = '#93C5FD';
+    ctx.font = '700 36px "Fredoka", sans-serif';
+    ctx.fillText('z', 415, 72);
+    ctx.font = '700 24px "Fredoka", sans-serif';
+    ctx.fillText('z', 445, 50);
+  } else if (mood === 'amazed') {
+    // Big sparkling eyes when Apollo 12 lands nearby!
+    ctx.fillStyle = '#FFE066';
+    ctx.beginPath();
+    ctx.arc(leftX, eyeY, 38, 0, Math.PI * 2);
+    ctx.arc(rightX, eyeY, 38, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.arc(leftX - 12, eyeY - 12, 13, 0, Math.PI * 2);
+    ctx.arc(rightX - 12, eyeY - 12, 13, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#FFE066';
+    ctx.beginPath();
+    ctx.ellipse(256, 178, 22, 26, 0, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (mood === 'proud') {
+    ctx.strokeStyle = '#FFE066';
+    ctx.lineWidth = 16;
+    ctx.beginPath();
+    ctx.arc(leftX, eyeY + 10, 32, Math.PI + 0.25, -0.25);
     ctx.stroke();
     ctx.beginPath();
-    ctx.arc(256, 162, 24, 0.25, Math.PI - 0.25);
+    ctx.arc(rightX, eyeY + 10, 32, Math.PI + 0.25, -0.25);
     ctx.stroke();
+    ctx.fillStyle = '#FFE066';
+    ctx.beginPath();
+    ctx.arc(256, 148, 44, 0.1, Math.PI - 0.1);
+    ctx.fill();
   }
 
   return configureColorTexture(canvas, maxAnisotropy);
@@ -530,7 +509,6 @@ export function createSolarPanelTexture(maxAnisotropy = 4): THREE.CanvasTexture 
   ctx.fillStyle = '#122E6E';
   ctx.fillRect(0, 0, 512, 512);
 
-  // Photovoltaic grid cells
   ctx.strokeStyle = '#4B8BFA';
   ctx.lineWidth = 4;
   for (let x = 0; x <= 512; x += 64) {
@@ -546,7 +524,6 @@ export function createSolarPanelTexture(maxAnisotropy = 4): THREE.CanvasTexture 
     ctx.stroke();
   }
 
-  // Subtle metallic busbars
   ctx.strokeStyle = 'rgba(210, 232, 255, 0.35)';
   ctx.lineWidth = 2;
   for (let x = 32; x < 512; x += 64) {
@@ -565,7 +542,6 @@ export function createEarthTexture(maxAnisotropy = 4): THREE.CanvasTexture {
   canvas.height = 256;
   const ctx = canvas.getContext('2d')!;
 
-  // Rich ocean blue
   const ocean = ctx.createLinearGradient(0, 0, 0, 256);
   ocean.addColorStop(0, '#1D74D1');
   ocean.addColorStop(0.5, '#1B8BE8');
@@ -573,7 +549,6 @@ export function createEarthTexture(maxAnisotropy = 4): THREE.CanvasTexture {
   ctx.fillStyle = ocean;
   ctx.fillRect(0, 0, 512, 256);
 
-  // Stylized vibrant continents
   ctx.fillStyle = '#4CCB6C';
   const blobs = [
     [90, 95, 55, 38],
@@ -589,12 +564,10 @@ export function createEarthTexture(maxAnisotropy = 4): THREE.CanvasTexture {
     ctx.fill();
   }
 
-  // Polar ice caps
   ctx.fillStyle = '#EEF8FF';
   ctx.fillRect(0, 0, 512, 22);
   ctx.fillRect(0, 234, 512, 22);
 
-  // Soft swirling white clouds
   ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
   for (let i = 0; i < 14; i++) {
     const cx = (i * 41 + 20) % 512;
@@ -607,9 +580,9 @@ export function createEarthTexture(maxAnisotropy = 4): THREE.CanvasTexture {
   return configureColorTexture(canvas, maxAnisotropy);
 }
 
-export function createAsteroidTexture(
-  baseHex: string,
-  craterHex: string,
+export function createMoonTexture(
+  baseHex = '#C2C8D4',
+  craterHex = '#8C96A8',
   maxAnisotropy = 4,
 ): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
@@ -620,12 +593,12 @@ export function createAsteroidTexture(
   ctx.fillStyle = baseHex;
   ctx.fillRect(0, 0, 512, 512);
 
-  // Rocky mottling
+  // Subtle lunar dust grain
   for (let i = 0; i < 160; i++) {
-    const x = ((i * 173) % 512);
-    const y = ((i * 257) % 512);
-    const r = 8 + (i % 24);
-    ctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)';
+    const x = (i * 173) % 512;
+    const y = (i * 257) % 512;
+    const r = 8 + (i % 22);
+    ctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.08)' : 'rgba(25,35,55,0.08)';
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
@@ -635,17 +608,44 @@ export function createAsteroidTexture(
   for (let i = 0; i < 26; i++) {
     const x = 32 + ((i * 97) % 448);
     const y = 32 + ((i * 139) % 448);
-    const r = 12 + ((i * 7) % 28);
+    const r = 10 + ((i * 7) % 26);
     ctx.fillStyle = craterHex;
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255, 240, 215, 0.28)';
-    ctx.lineWidth = 3;
+
+    ctx.strokeStyle = 'rgba(248, 250, 252, 0.35)';
+    ctx.lineWidth = 2.5;
     ctx.beginPath();
-    ctx.arc(x, y, r, -0.6, 2.2);
+    ctx.arc(x, y, r, -0.5, 2.2);
     ctx.stroke();
   }
+
+  return configureColorTexture(canvas, maxAnisotropy);
+}
+
+export function createBadgeTexture(
+  label: string,
+  bgHex: string,
+  textHex: string,
+  maxAnisotropy = 4,
+): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d')!;
+
+  ctx.fillStyle = bgHex;
+  ctx.fillRect(0, 0, 512, 256);
+  ctx.strokeStyle = textHex;
+  ctx.lineWidth = 12;
+  ctx.strokeRect(14, 14, 484, 228);
+
+  ctx.fillStyle = textHex;
+  ctx.font = '700 84px "Fredoka", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, 256, 128);
 
   return configureColorTexture(canvas, maxAnisotropy);
 }

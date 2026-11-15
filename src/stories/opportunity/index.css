@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+@theme {
+  --font-story: "Fredoka", "Plus Jakarta Sans", sans-serif;
+  --font-num: "JetBrains Mono", monospace;
+  --font-sans: "Plus Jakarta Sans", sans-serif;
+}
