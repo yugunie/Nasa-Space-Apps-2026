@@ -152,7 +152,7 @@ export function StoryHUD({
       </div>
 
       {/* Bottom Collapsible Control Dock (unobstructed center 3D viewport) */}
-      <div className="flex flex-col items-center w-full">
+      <div className="flex w-full flex-col items-start pr-24 sm:pr-40">
         <button
           type="button"
           onClick={onToggleDock}
