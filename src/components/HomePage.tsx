@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
+import BackgroundMusic from "./BackgroundMusic";
 import "./HomePage.css";
 
 type Region = "moon" | "mars" | "beyond";
@@ -420,6 +421,7 @@ export default function HomePage() {
 
   return (
     <div className="sa-home">
+      <BackgroundMusic />
       <div className="sa-sky" aria-hidden="true" />
       <div className="sa-stars" aria-hidden="true" />
       {openingArchiveId && <div className="sa-archive-transition" aria-hidden="true" />}
