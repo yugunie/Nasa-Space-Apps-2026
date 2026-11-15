@@ -27,7 +27,7 @@ export function useBackgroundMusic() {
     };
 
     const resumeMusic = () => {
-      if (sessionStorage.getItem("nasaMusicOn") === "true") {
+      if (sessionStorage.getItem("nasaMusicOn") !== "false") {
         audio.play()
           .then(() => setPlaying(true))
           .catch(() => {});
@@ -84,28 +84,37 @@ export default function BackgroundMusic() {
     <>
       <audio
         ref={audioRef}
-        src="/audio/space-music.mp3"
+        src={`${import.meta.env.BASE_URL}audio/space-music.mp3`}
         loop
         preload="auto"
       />
-
       <button
+        type="button"
         onClick={toggleMusic}
+        aria-label={playing ? "Pause background music" : "Play background music"}
+        aria-pressed={playing}
+        title={playing ? "Background music on" : "Background music off"}
         style={{
           position: "fixed",
-          bottom: "110px",
-          right: "25px",
-          zIndex: 9999,
-          background: "#14152e",
+          bottom: "24px",
+          right: "24px",
+          zIndex: 900,
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          padding: "11px 16px",
+          border: "1px solid rgba(216, 189, 133, 0.8)",
+          borderRadius: "999px",
+          background: "rgba(20, 21, 46, 0.94)",
           color: "#f6dfa8",
-          border: "1px solid #d8bd85",
-          borderRadius: "30px",
-          padding: "12px 18px",
+          boxShadow: "0 6px 24px rgba(0, 0, 0, 0.35)",
           cursor: "pointer",
           fontFamily: "inherit",
+          fontSize: "13px",
         }}
       >
-        {playing ? "🔊 Music ON" : "🔇 Music OFF"}
+        <span aria-hidden="true">{playing ? "♫" : "♪"}</span>
+        <span>{playing ? "Music On" : "Music Off"}</span>
       </button>
     </>
   );

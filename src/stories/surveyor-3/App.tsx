@@ -118,7 +118,12 @@ export default function App() {
 
   return (
     <main className="relative w-screen h-screen overflow-hidden bg-[#06091a]">
-      <audio ref={musicAudioRef} src="/audio/space-music.mp3" loop preload="auto" />
+      <audio
+        ref={musicAudioRef}
+        src={`${import.meta.env.BASE_URL}audio/space-music.mp3`}
+        loop
+        preload="auto"
+      />
       <div
         aria-hidden="true"
         className={`pointer-events-none fixed inset-0 z-[100] bg-black transition-opacity duration-700 ease-out motion-reduce:transition-none ${

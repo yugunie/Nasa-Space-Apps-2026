@@ -5,7 +5,7 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
-    base: "/NASA-Space-Apps-2026/",
+    base: "/Nasa-Space-Apps-2026/",
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {

@@ -1,3 +1,4 @@
+import { useBackgroundMusic } from '../../components/BackgroundMusic';
 import { useCallback, useEffect, useState } from 'react';
 import { soundEngine } from './audio/soundEngine';
 import { StoryHUD } from './components/StoryHUD';
@@ -6,13 +7,20 @@ import { SpaceBookStage } from './three/SpaceBookStage';
 
 export default function App() {
   const [pageIndex, setPageIndex] = useState(0);
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(
+    () => sessionStorage.getItem('nasaMusicOn') !== 'false',
+  );
   const [readAloudEnabled, setReadAloudEnabled] = useState(false);
   const [dockCollapsed, setDockCollapsed] = useState(false);
   const [actionPulseId, setActionPulseId] = useState(0);
   const [resetViewId, setResetViewId] = useState(0);
+  const { audioRef: musicAudioRef, setMusicEnabled } = useBackgroundMusic();
 
   const currentPage = STORY_PAGES[pageIndex] ?? STORY_PAGES[0];
+
+  useEffect(() => {
+    soundEngine.soundEnabled = soundEnabled;
+  }, [soundEnabled]);
 
   const goToPage = useCallback((nextIdx: number) => {
     const clamped = Math.max(0, Math.min(STORY_PAGES.length - 1, nextIdx));
@@ -61,12 +69,11 @@ export default function App() {
   }, []);
 
   const handleToggleSound = useCallback(() => {
-    setSoundEnabled((prev) => {
-      const next = !prev;
-      soundEngine.soundEnabled = next;
-      return next;
-    });
-  }, []);
+    const next = !soundEnabled;
+    setSoundEnabled(next);
+    soundEngine.soundEnabled = next;
+    void setMusicEnabled(next);
+  }, [soundEnabled, setMusicEnabled]);
 
   const handleToggleReadAloud = useCallback(() => {
     setReadAloudEnabled((prev) => {
@@ -105,6 +112,12 @@ export default function App() {
 
   return (
     <main className="relative w-screen h-screen overflow-hidden bg-[#0c0509]">
+      <audio
+        ref={musicAudioRef}
+        src={`${import.meta.env.BASE_URL}audio/space-music.mp3`}
+        loop
+        preload="auto"
+      />
       <SpaceBookStage
         pageIndex={pageIndex}
         actionPulseId={actionPulseId}
