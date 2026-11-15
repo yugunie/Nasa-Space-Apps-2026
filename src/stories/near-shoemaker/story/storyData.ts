@@ -1,18 +1,17 @@
 export type StorySceneId =
   | 'cover'
   | 'meet-near'
-  | 'mission'
-  | 'blast-off'
-  | 'mathilde'
-  | 'passed-stop'
-  | 'lost-connection'
+  | 'leaving-earth'
+  | 'passing-mathilde'
+  | 'happily-in-space'
+  | 'missed-the-stop'
   | 'back-on-track'
   | 'orbiting-eros'
-  | 'unexpected-landing'
+  | 'unexpected-plan'
+  | 'landed-on-eros'
   | 'nothing-impossible'
   | 'grandpa-eros'
-  | 'never-forgotten'
-  | 'cosmic-hug';
+  | 'never-forgotten';
 
 export interface PopupLine {
   text: string;
@@ -24,16 +23,21 @@ export interface StoryPage {
   index: number;
   sceneId: StorySceneId;
   chapterTitle: string;
-  /** Short, crisp lines rendered upright at 90 degrees on the open book with zero box background */
   popupLines: PopupLine[];
-  /** Full spoken narration for Read-Aloud mode */
   narration: string;
-  /** Interactive action button label */
   actionLabel: string;
-  /** Subtle page footer cue on the flat paper spread */
   pageSpreadHint: string;
-  /** Sound cue when flipping to this page */
-  soundCue: 'open' | 'happy' | 'boost' | 'camera' | 'uhoh' | 'sad' | 'fanfare' | 'gentle';
+  soundCue:
+    | 'open'
+    | 'happy'
+    | 'launch'
+    | 'wave'
+    | 'worry'
+    | 'signal'
+    | 'camera'
+    | 'surprise'
+    | 'proud'
+    | 'fanfare';
 }
 
 export const STORY_PAGES: StoryPage[] = [
@@ -42,195 +46,181 @@ export const STORY_PAGES: StoryPage[] = [
     sceneId: 'cover',
     chapterTitle: 'Book Cover',
     popupLines: [
-      { text: 'NEAR Shoemaker', color: '#FFE066', scale: 1.25 },
-      { text: 'Told by Jacob & Lily', color: '#FFFFFF', scale: 0.9 },
+      { text: 'NEAR Shoemaker', color: '#FFE066', scale: 1.2 },
+      { text: "Jacob & Lily's Space Adventure", color: '#FFFFFF', scale: 0.92 },
     ],
     narration:
-      'Welcome to NEAR Shoemaker, a space story told by Jacob and Lily! Click Open Book to start the adventure.',
+      "Hi, I'm Jacob! Welcome to Near's Shoemaker, our 3D storybook with Lily! Tap Open Book to meet our friend Near.",
     actionLabel: 'Open Book',
-    pageSpreadHint: 'Tap the book cover to open',
+    pageSpreadHint: 'Tap the dark purple book cover to open',
     soundCue: 'open',
   },
   {
     index: 1,
     sceneId: 'meet-near',
-    chapterTitle: 'Meet NEAR',
+    chapterTitle: 'Meet Near!',
     popupLines: [
-      { text: 'This is NEAR Shoemaker.', color: '#FFE066', scale: 1.05 },
-      { text: 'He is our robotic space probe friend!', color: '#FFFFFF', scale: 0.96 },
+      { text: 'This is NEAR Shoemaker, our friend!', color: '#FFE066', scale: 0.96 },
+      { text: 'He is a robotic space probe called Near!', color: '#FFFFFF', scale: 0.92 },
     ],
     narration:
-      "Hi! I'm Jacob, and this is Lily. This is NEAR Shoemaker. Let's call him NEAR! He is our friend, and he is a robotic space probe.",
-    actionLabel: 'Wave to NEAR',
-    pageSpreadHint: 'Tap NEAR to say hello',
+      "Hi everyone, I'm Jacob! This is NEAR Shoemaker. It is our friend. Let us call him Near—he is known as a robotic space probe!",
+    actionLabel: 'Say Hi to Near',
+    pageSpreadHint: 'Tap Near beside Jacob and Lily to spin and wave',
     soundCue: 'happy',
   },
   {
     index: 2,
-    sceneId: 'mission',
-    chapterTitle: 'One Big Mission',
+    sceneId: 'leaving-earth',
+    chapterTitle: 'Leaving Earth',
     popupLines: [
-      { text: 'NEAR has one big mission:', color: '#7CE8FF', scale: 1.02 },
-      { text: 'Take pictures of asteroid Eros for our scientists!', color: '#FFFFFF', scale: 0.94 },
+      { text: 'One mission: snap pictures of asteroid Eros!', color: '#7CE8FF', scale: 0.94 },
+      { text: 'Bye-bye Earth! Scientists wave goodbye!', color: '#FFFFFF', scale: 0.92 },
     ],
     narration:
-      'NEAR has one mission. He must fly into space and send pictures of asteroid Eros back to our scientist friends!',
-    actionLabel: 'Preview Route',
-    pageSpreadHint: 'Tap Eros or NEAR to trace the path',
-    soundCue: 'happy',
+      'Near has one mission. He must go to space and send pictures of asteroid Eros to our scientist friends. One day, Near leaves Earth!',
+    actionLabel: 'Launch Near',
+    pageSpreadHint: 'Tap Near to zoom from Earth toward Eros',
+    soundCue: 'launch',
   },
   {
     index: 3,
-    sceneId: 'blast-off',
-    chapterTitle: 'Leaving Earth',
+    sceneId: 'passing-mathilde',
+    chapterTitle: 'Hello, Mathilde!',
     popupLines: [
-      { text: 'One day, NEAR blasts off from Earth!', color: '#FFE066', scale: 1.04 },
-      { text: '"Bye-bye, NEAR!" wave the scientists.', color: '#FFFFFF', scale: 0.94 },
+      { text: "Near passed Eros's friend Mathilde!", color: '#D8B4FE', scale: 0.96 },
+      { text: 'Wave hello as Near flies right by!', color: '#FFE066', scale: 0.94 },
     ],
     narration:
-      'One day, NEAR leaves Earth to complete his mission. Our scientist friends wave goodbye from the ground!',
-    actionLabel: 'Rocket Boost',
-    pageSpreadHint: 'Tap NEAR for extra thrusters',
-    soundCue: 'boost',
+      "While Near was on his way, he passed by a friend of Eros's. This is Mathilde! Mathilde and Near waved hello to each other!",
+    actionLabel: 'Wave Hello',
+    pageSpreadHint: 'Tap Mathilde or Near to wave in space',
+    soundCue: 'wave',
   },
   {
     index: 4,
-    sceneId: 'mathilde',
-    chapterTitle: 'Hello, Mathilde!',
+    sceneId: 'happily-in-space',
+    chapterTitle: 'Happy in Space',
     popupLines: [
-      { text: 'On the way, NEAR passed asteroid Mathilde.', color: '#FFFFFF', scale: 0.98 },
-      { text: 'They waved hello in deep space!', color: '#FFE066', scale: 1.0 },
+      { text: 'Everything was going great in deep space!', color: '#80FFDB', scale: 0.96 },
+      { text: 'Near zoomed happily... until...', color: '#FFE066', scale: 0.95 },
     ],
     narration:
-      "While NEAR was on his way, he passed by a friend of Eros. This is Mathilde! Mathilde and NEAR happily waved at each other.",
-    actionLabel: 'Wave Back',
-    pageSpreadHint: 'Tap Mathilde or NEAR to wave',
+      'Everything was going great! Near was cruising happily through the sparkling stars in space... Until...',
+    actionLabel: 'Zoom Happily',
+    pageSpreadHint: 'Tap Near gliding through the stars',
     soundCue: 'happy',
   },
   {
     index: 5,
-    sceneId: 'passed-stop',
-    chapterTitle: 'Uh-Oh! Missed Stop',
+    sceneId: 'missed-the-stop',
+    chapterTitle: 'Passed His Stop!',
     popupLines: [
-      { text: 'Everything was going great... UNTIL...', color: '#7CE8FF', scale: 0.96 },
-      { text: 'NEAR passed his stop! Oh no!', color: '#FF8A80', scale: 1.08 },
+      { text: 'Oh no! Near passed his stop!', color: '#FF9E80', scale: 1.0 },
+      { text: 'Scientists lost connection—Near is crying!', color: '#FFFFFF', scale: 0.9 },
     ],
     narration:
-      'Everything was going great... until... NEAR passed his stop! Oh no! NEAR was shocked in the middle of nowhere.',
-    actionLabel: 'Spin Around',
-    pageSpreadHint: 'Tap NEAR to look for Eros',
-    soundCue: 'uhoh',
+      "Near passed his stop! Shocked in the middle of nowhere, our scientist friends lost connection. Oh no! They can't help Near!",
+    actionLabel: 'Send SOS',
+    pageSpreadHint: 'Tap poor crying Near to flash an SOS signal',
+    soundCue: 'worry',
   },
   {
     index: 6,
-    sceneId: 'lost-connection',
-    chapterTitle: 'Lost Signal',
-    popupLines: [
-      { text: 'Our scientists lost connection!', color: '#FF8A80', scale: 1.04 },
-      { text: 'Poor NEAR felt lost and started to cry.', color: '#FFFFFF', scale: 0.95 },
-    ],
-    narration:
-      "Our scientist friends lost connection! Oh no! They couldn't help NEAR, and poor NEAR felt so lonely.",
-    actionLabel: 'Send Signal',
-    pageSpreadHint: 'Tap the dish to try calling NEAR',
-    soundCue: 'sad',
-  },
-  {
-    index: 7,
     sceneId: 'back-on-track',
     chapterTitle: 'Back on Track!',
     popupLines: [
-      { text: 'Hours passed... and FINALLY! Signal restored!', color: '#80FFDB', scale: 1.0 },
-      { text: 'The scientists steered NEAR back on track. Woohoo!', color: '#FFE066', scale: 0.95 },
+      { text: 'Hours passed... Signal found! Woohoo!', color: '#80FFDB', scale: 0.98 },
+      { text: 'Scientists guided Near back on track!', color: '#FFE066', scale: 0.93 },
     ],
     narration:
-      'Hours passed, and finally! NEAR heard from our scientist friends! They helped NEAR get back on the right track. Woohoo!',
-    actionLabel: 'Celebrate',
-    pageSpreadHint: 'Tap NEAR for a happy flip',
-    soundCue: 'fanfare',
+      'Hours passed, and finally Near heard from our scientist friends! They helped Near go back on the right track. Woohoo!',
+    actionLabel: 'Beam Guide Signal',
+    pageSpreadHint: 'Tap the radio dish or happy Near to beam back',
+    soundCue: 'signal',
   },
   {
-    index: 8,
+    index: 7,
     sceneId: 'orbiting-eros',
-    chapterTitle: 'Camera Time at Eros',
+    chapterTitle: 'Orbiting Eros',
     popupLines: [
-      { text: 'NEAR arrived at asteroid Eros!', color: '#FFE066', scale: 1.04 },
-      { text: 'Click! Snap! Taking pictures from orbit!', color: '#FFFFFF', scale: 0.96 },
+      { text: 'Near arrived at asteroid Eros!', color: '#FFE066', scale: 1.02 },
+      { text: 'Orbiting Eros & snapping close-up photos!', color: '#FFFFFF', scale: 0.92 },
     ],
     narration:
-      'Finally, NEAR arrives at his destination and completes his mission! He orbits Eros with his camera, snapping awesome photos.',
-    actionLabel: 'Snap Photo',
-    pageSpreadHint: 'Tap NEAR to take a space photo',
+      'Finally, Near arrives at his destination and completes his mission—orbiting asteroid Eros with his camera ready!',
+    actionLabel: 'Snap Photos',
+    pageSpreadHint: 'Tap Near orbiting Eros to flash his camera',
     soundCue: 'camera',
   },
   {
-    index: 9,
-    sceneId: 'unexpected-landing',
-    chapterTitle: 'Unexpected Landing',
+    index: 8,
+    sceneId: 'unexpected-plan',
+    chapterTitle: 'Come Back? Wait...',
     popupLines: [
-      { text: '"You can come back now," said the scientists.', color: '#7CE8FF', scale: 0.95 },
-      { text: 'Instead... NEAR landed right onto Eros!', color: '#FFE066', scale: 1.02 },
+      { text: 'Scientists said: "You can come back now!"', color: '#7CE8FF', scale: 0.94 },
+      { text: 'But Near had a daring surprise idea!', color: '#FFE066', scale: 0.94 },
     ],
     narration:
-      'Our scientist friends only needed NEAR to take pictures from far away. But NEAR did something unexpected... he landed onto Eros without landing legs!',
-    actionLabel: 'Touch Down',
-    pageSpreadHint: 'Tap NEAR to bounce gently on Eros',
-    soundCue: 'boost',
+      'Our scientist friends only needed Near to take pictures from far away, and told him he could come back. But Near did something unexpected!',
+    actionLabel: 'Spark Idea',
+    pageSpreadHint: 'Tap Near to light up his big landing idea',
+    soundCue: 'surprise',
+  },
+  {
+    index: 9,
+    sceneId: 'landed-on-eros',
+    chapterTitle: 'Landed on Eros!',
+    popupLines: [
+      { text: 'Near landed onto Eros without landing legs!', color: '#FFE066', scale: 0.93 },
+      { text: '"But how?!" asked shocked scientists!', color: '#FF9E80', scale: 0.94 },
+    ],
+    narration:
+      'Near landed onto Eros, even though he did not have the structure to do so! "But how?!" asked the shocked scientist friends!',
+    actionLabel: 'Gentle Touchdown',
+    pageSpreadHint: 'Tap Near on Eros or the shocked scientists',
+    soundCue: 'surprise',
   },
   {
     index: 10,
     sceneId: 'nothing-impossible',
     chapterTitle: 'Nothing Is Impossible!',
     popupLines: [
-      { text: '"But HOW?!" asked the shocked scientists.', color: '#FF9EBB', scale: 0.98 },
-      { text: '"Because nothing is impossible!" replied NEAR.', color: '#FFE066', scale: 1.02 },
+      { text: '"Because nothing is impossible!"', color: '#FFE066', scale: 1.02 },
+      { text: 'Replied smug little Near on asteroid Eros!', color: '#80FFDB', scale: 0.92 },
     ],
     narration:
-      '"But how?!" asked our shocked scientist friends. "Because nothing is impossible!" replied NEAR with a big proud smile.',
-    actionLabel: 'Cool Pose',
-    pageSpreadHint: 'Tap NEAR to flash his shades',
-    soundCue: 'fanfare',
+      '"Because nothing is impossible!" replied Near proudly with a smug grin right on the asteroid!',
+    actionLabel: 'Strike a Pose',
+    pageSpreadHint: 'Tap smug Near on Eros to sparkle',
+    soundCue: 'proud',
   },
   {
     index: 11,
     sceneId: 'grandpa-eros',
-    chapterTitle: 'Grandpa Eros',
+    chapterTitle: 'Ancient Grandpa Eros',
     popupLines: [
-      { text: 'NEAR’s photos taught us something amazing:', color: '#FFFFFF', scale: 0.96 },
-      { text: 'Eros is as old as the universe! A grandpa rock!', color: '#FFE066', scale: 1.0 },
+      { text: 'Eros may be as old as the universe!', color: '#D8B4FE', scale: 0.96 },
+      { text: 'Not just some rock—Grandpa Eros!', color: '#FFE066', scale: 0.96 },
     ],
     narration:
-      'All the photos NEAR sent helped our scientist friends so much! Eros is very old—maybe as old as the universe! Not just some ordinary rock.',
-    actionLabel: 'Tap Grandpa Eros',
-    pageSpreadHint: 'Tap Grandpa Eros for a wise wink',
-    soundCue: 'gentle',
+      'All the photos Near sent helped our scientist friends so much! Eros is very old—maybe as old as the universe! Not just some rock!',
+    actionLabel: 'Greet Grandpa Eros',
+    pageSpreadHint: 'Tap Grandpa Eros to tip his glasses and chuckle',
+    soundCue: 'camera',
   },
   {
     index: 12,
     sceneId: 'never-forgotten',
     chapterTitle: 'Never Forgotten',
     popupLines: [
-      { text: 'NEAR’s radio fell quiet on Eros at last.', color: '#7CE8FF', scale: 0.96 },
-      { text: 'Thank you, NEAR! You will never be forgotten.', color: '#FFE066', scale: 1.02 },
+      { text: 'Near lost signal, yet will never be forgotten!', color: '#80FFDB', scale: 0.92 },
+      { text: 'Astronaut Jacob hugs Near · The End', color: '#FFE066', scale: 0.96 },
     ],
     narration:
-      "NEAR lost contact with our scientist friends in the end, and never regained signal. But NEAR's scans helped them so much! He will never be forgotten.",
-    actionLabel: 'Send Thanks',
-    pageSpreadHint: 'Tap to send shining thank-you stars',
-    soundCue: 'gentle',
-  },
-  {
-    index: 13,
-    sceneId: 'cosmic-hug',
-    chapterTitle: 'The End',
-    popupLines: [
-      { text: 'The End!', color: '#FFE066', scale: 1.2 },
-      { text: 'Big space hugs from Jacob, Lily & NEAR!', color: '#FFFFFF', scale: 0.96 },
-    ],
-    narration:
-      'The end! Jacob put on his astronaut suit to give NEAR Shoemaker the biggest cosmic hug ever. Thanks for reading!',
-    actionLabel: 'Big Space Hug',
-    pageSpreadHint: 'Tap Jacob or NEAR for a cosmic hug',
+      'Near lost contact with our scientist friends in the end and never regained signal. But his scans helped them so much—Near will never be forgotten! The end.',
+    actionLabel: 'Hug Near!',
+    pageSpreadHint: 'Tap astronaut Jacob hugging Near and cheering Lily',
     soundCue: 'fanfare',
   },
 ];

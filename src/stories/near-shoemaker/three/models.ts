@@ -5,25 +5,33 @@ import {
   createCoverTexture,
   createEarthTexture,
   createGlowSpriteTexture,
+  createProbeFaceTexture,
+  createScanChartTexture,
   createSolarPanelTexture,
-  createVisorTexture,
-  type NearMood,
+  type ProbeMood,
 } from './textures';
 
 export interface NearProbeRig {
   group: THREE.Group;
-  dishGroup: THREE.Group;
-  wings: THREE.Group[];
-  visorMesh: THREE.Mesh;
-  sunglasses: THREE.Group;
-  cameraProp: THREE.Group;
-  cameraFlashMesh: THREE.Mesh;
-  thrusterFlames: THREE.Group;
-  setMood: (mood: NearMood) => void;
+  leftArm: THREE.Group;
+  rightArm: THREE.Group;
+  dishPivot: THREE.Group;
+  solarWings: THREE.Group;
+  cameraFlash: THREE.Mesh | null;
+  setMood: (mood: ProbeMood) => void;
   dispose: () => void;
 }
 
-export function createNearProbe(maxAnisotropy = 4): NearProbeRig {
+/**
+ * NEAR Shoemaker Robotic Space Probe:
+ * Octagonal gold-foil bus, 4 windmill blue solar wings, top parabolic dish,
+ * expressive visor face, waving arms (with optional handheld camera), and bottom
+ * instrument deck (no landing legs!). Bottom sits at y = 0.
+ */
+export function createNearProbe(
+  maxAnisotropy = 4,
+  options: { withCamera?: boolean } = {},
+): NearProbeRig {
   const group = new THREE.Group();
 
   const goldFoilMat = new THREE.MeshStandardMaterial({
@@ -31,257 +39,443 @@ export function createNearProbe(maxAnisotropy = 4): NearProbeRig {
     metalness: 0.86,
     roughness: 0.24,
   });
-  const darkMetalMat = new THREE.MeshStandardMaterial({
-    color: 0x26314a,
-    metalness: 0.65,
-    roughness: 0.45,
+  const aluminumMat = new THREE.MeshStandardMaterial({
+    color: 0xe2e8f0,
+    metalness: 0.62,
+    roughness: 0.3,
   });
-  const whiteTrimMat = new THREE.MeshStandardMaterial({
-    color: 0xf2f6ff,
-    metalness: 0.12,
-    roughness: 0.38,
+  const darkMat = new THREE.MeshStandardMaterial({
+    color: 0x1e1b2e,
+    metalness: 0.45,
+    roughness: 0.42,
   });
   const solarTex = createSolarPanelTexture(maxAnisotropy);
   const solarMat = new THREE.MeshStandardMaterial({
     map: solarTex,
-    metalness: 0.45,
+    metalness: 0.38,
     roughness: 0.22,
   });
 
-  // 1. Primary octagonal spacecraft bus
-  const busGeo = new THREE.CylinderGeometry(0.4, 0.42, 0.56, 8);
-  const busMesh = new THREE.Mesh(busGeo, goldFoilMat);
-  busMesh.position.y = 0.42;
-  busMesh.castShadow = true;
-  busMesh.receiveShadow = true;
-  group.add(busMesh);
-
-  // Top & bottom structural collars
-  const collarGeo = new THREE.CylinderGeometry(0.43, 0.43, 0.07, 8);
-  const topCollar = new THREE.Mesh(collarGeo, darkMetalMat);
-  topCollar.position.y = 0.71;
-  topCollar.castShadow = true;
-  group.add(topCollar);
-
-  const botCollar = new THREE.Mesh(collarGeo, darkMetalMat);
-  botCollar.position.y = 0.14;
-  botCollar.castShadow = true;
-  group.add(botCollar);
-
-  // 2. Parabolic High-Gain Dish on top (LatheGeometry)
-  const dishGroup = new THREE.Group();
-  dishGroup.position.set(0, 0.75, 0);
-  const dishPoints = [
-    new THREE.Vector2(0.0, 0.0),
-    new THREE.Vector2(0.16, 0.03),
-    new THREE.Vector2(0.32, 0.1),
-    new THREE.Vector2(0.42, 0.2),
-  ];
-  const dishGeo = new THREE.LatheGeometry(dishPoints, 28);
-  const dishMat = new THREE.MeshStandardMaterial({
-    color: 0xf8fbff,
-    metalness: 0.15,
-    roughness: 0.32,
-    side: THREE.DoubleSide,
-  });
-  const dishMesh = new THREE.Mesh(dishGeo, dishMat);
-  dishMesh.castShadow = true;
-  dishGroup.add(dishMesh);
-
-  // Dish feed horn & glowing beacon
-  const hornMast = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.022, 0.03, 0.34, 10),
-    darkMetalMat,
+  // 1. Bottom Instrument & Thruster Deck (grounded at y = 0, no landing gear!)
+  const thrusterRing = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.24, 0.28, 0.1, 8),
+    darkMat,
   );
-  hornMast.position.y = 0.18;
-  dishGroup.add(hornMast);
+  thrusterRing.position.y = 0.05;
+  thrusterRing.castShadow = true;
+  group.add(thrusterRing);
 
-  const beacon = new THREE.Mesh(
-    new THREE.SphereGeometry(0.055, 16, 16),
-    new THREE.MeshStandardMaterial({
-      color: 0x7ce8ff,
-      emissive: 0x38bdf8,
-      emissiveIntensity: 0.9,
-      roughness: 0.2,
-    }),
+  const sensorLens = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.08, 0.08, 0.08, 12),
+    aluminumMat,
   );
-  beacon.position.y = 0.36;
-  dishGroup.add(beacon);
-  group.add(dishGroup);
+  sensorLens.position.set(0, 0.06, 0.22);
+  sensorLens.rotation.x = Math.PI / 2;
+  group.add(sensorLens);
 
-  // 3. Cute Front Visor Display
-  const visorFrame = new THREE.Mesh(
-    new THREE.BoxGeometry(0.46, 0.24, 0.08),
-    darkMetalMat,
+  // 2. Octagonal Gold-Foil Bus Body
+  const bus = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.35, 0.35, 0.42, 8),
+    goldFoilMat,
   );
-  visorFrame.position.set(0, 0.44, 0.39);
-  visorFrame.castShadow = true;
-  group.add(visorFrame);
+  bus.position.y = 0.31;
+  bus.rotation.y = Math.PI / 8;
+  bus.castShadow = true;
+  bus.receiveShadow = true;
+  group.add(bus);
 
-  const moodTextures: Record<NearMood, THREE.CanvasTexture> = {
-    normal: createVisorTexture('normal', maxAnisotropy),
-    happy: createVisorTexture('happy', maxAnisotropy),
-    shocked: createVisorTexture('shocked', maxAnisotropy),
-    crying: createVisorTexture('crying', maxAnisotropy),
-    smug: createVisorTexture('smug', maxAnisotropy),
-    sleeping: createVisorTexture('sleeping', maxAnisotropy),
+  const topDeck = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.37, 0.37, 0.04, 8),
+    aluminumMat,
+  );
+  topDeck.position.y = 0.53;
+  topDeck.rotation.y = Math.PI / 8;
+  topDeck.castShadow = true;
+  group.add(topDeck);
+
+  // 3. Cute Expressive Visor Screen on Front of Bus
+  const bezel = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.22, 0.06), darkMat);
+  bezel.position.set(0, 0.33, 0.32);
+  group.add(bezel);
+
+  const moodTextures: Record<ProbeMood, THREE.CanvasTexture> = {
+    normal: createProbeFaceTexture('normal', maxAnisotropy),
+    happy: createProbeFaceTexture('happy', maxAnisotropy),
+    shocked: createProbeFaceTexture('shocked', maxAnisotropy),
+    crying: createProbeFaceTexture('crying', maxAnisotropy),
+    smug: createProbeFaceTexture('smug', maxAnisotropy),
+    sleepy: createProbeFaceTexture('sleepy', maxAnisotropy),
   };
 
-  const visorMat = new THREE.MeshBasicMaterial({
-    map: moodTextures.normal,
-  });
-  const visorMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.19), visorMat);
-  visorMesh.position.set(0, 0.44, 0.435);
-  group.add(visorMesh);
+  const faceMat = new THREE.MeshBasicMaterial({ map: moodTextures.normal });
+  const faceMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.33, 0.17), faceMat);
+  faceMesh.position.set(0, 0.33, 0.354);
+  group.add(faceMesh);
 
-  // 4. Four Solar Array Wings arranged crosswise
-  const wings: THREE.Group[] = [];
-  const wingAngles = [0, Math.PI / 2, Math.PI, (Math.PI * 3) / 2];
-  for (const angle of wingAngles) {
+  // 4. Four Iconic Cross/Windmill Solar Panel Wings
+  const solarWings = new THREE.Group();
+  solarWings.position.y = 0.5;
+  const wingAngles = [0.45, Math.PI / 2 + 0.45, Math.PI + 0.45, (Math.PI * 3) / 2 + 0.45];
+  for (const ang of wingAngles) {
     const wingPivot = new THREE.Group();
-    wingPivot.position.set(0, 0.44, 0);
-    wingPivot.rotation.y = angle;
+    wingPivot.rotation.y = ang;
 
-    // Mounting arm strut
-    const strut = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.028, 0.028, 0.32, 8),
-      whiteTrimMat,
-    );
-    strut.rotation.z = Math.PI / 2;
-    strut.position.x = 0.48;
-    wingPivot.add(strut);
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.025, 0.04), aluminumMat);
+    arm.position.set(0.4, 0, 0);
 
-    // Solar panel blade
-    const blade = new THREE.Mesh(
-      new THREE.BoxGeometry(0.84, 0.032, 0.34),
-      solarMat,
-    );
-    blade.position.x = 0.96;
-    blade.castShadow = true;
-    blade.receiveShadow = true;
-    wingPivot.add(blade);
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.022, 0.28), solarMat);
+    panel.position.set(0.74, 0, 0);
+    panel.rotation.x = 0.16;
+    panel.castShadow = true;
 
-    // Metallic edge frame
-    const tip = new THREE.Mesh(
-      new THREE.BoxGeometry(0.05, 0.045, 0.36),
-      goldFoilMat,
-    );
-    tip.position.x = 1.38;
-    wingPivot.add(tip);
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.014, 0.3), aluminumMat);
+    frame.position.set(0.74, -0.008, 0);
+    frame.rotation.x = 0.16;
 
-    group.add(wingPivot);
-    wings.push(wingPivot);
+    wingPivot.add(arm, frame, panel);
+    solarWings.add(wingPivot);
   }
+  group.add(solarWings);
 
-  // 5. Thruster nozzle + animated flame cones
-  const thrusterBell = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.11, 0.18, 0.16, 16),
-    darkMetalMat,
-  );
-  thrusterBell.position.y = 0.04;
-  group.add(thrusterBell);
+  // 5. Top High-Gain Parabolic Dish Antenna
+  const dishPivot = new THREE.Group();
+  dishPivot.position.set(0, 0.56, -0.04);
+  const dishMast = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.18, 10), aluminumMat);
+  dishMast.position.y = 0.09;
 
-  const thrusterFlames = new THREE.Group();
-  thrusterFlames.position.set(0, -0.05, 0);
-  const outerFlame = new THREE.Mesh(
-    new THREE.ConeGeometry(0.16, 0.56, 14),
-    new THREE.MeshBasicMaterial({
-      color: 0xff8c2b,
-      transparent: true,
-      opacity: 0.88,
+  const dishHolder = new THREE.Group();
+  dishHolder.position.y = 0.2;
+  dishHolder.rotation.x = -0.35;
+  const pts = [
+    new THREE.Vector2(0, 0),
+    new THREE.Vector2(0.15, 0.03),
+    new THREE.Vector2(0.32, 0.12),
+  ];
+  const dish = new THREE.Mesh(
+    new THREE.LatheGeometry(pts, 24),
+    new THREE.MeshStandardMaterial({
+      color: 0xf8fafc,
+      roughness: 0.35,
+      metalness: 0.18,
+      side: THREE.DoubleSide,
     }),
   );
-  outerFlame.rotation.x = Math.PI;
-  outerFlame.position.y = -0.25;
-  thrusterFlames.add(outerFlame);
-
-  const innerFlame = new THREE.Mesh(
-    new THREE.ConeGeometry(0.09, 0.36, 12),
-    new THREE.MeshBasicMaterial({
-      color: 0xfff3a1,
-      transparent: true,
-      opacity: 0.95,
-    }),
-  );
-  innerFlame.rotation.x = Math.PI;
-  innerFlame.position.y = -0.17;
-  thrusterFlames.add(innerFlame);
-  thrusterFlames.visible = false;
-  group.add(thrusterFlames);
-
-  // 6. Cool Sunglasses Prop (hidden by default, shown on "Nothing is impossible!")
-  const sunglasses = new THREE.Group();
-  sunglasses.position.set(0, 0.46, 0.455);
-  const shadeMat = new THREE.MeshStandardMaterial({
-    color: 0x0b0f1c,
-    metalness: 0.9,
-    roughness: 0.1,
-  });
-  const frameMat = new THREE.MeshStandardMaterial({
-    color: 0xffe066,
-    metalness: 0.85,
-    roughness: 0.2,
-  });
-  const leftLens = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.095, 0.03), shadeMat);
-  leftLens.position.x = -0.105;
-  const rightLens = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.095, 0.03), shadeMat);
-  rightLens.position.x = 0.105;
-  const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.025, 0.03), frameMat);
-  bridge.position.y = 0.02;
-  sunglasses.add(leftLens, rightLens, bridge);
-  sunglasses.visible = false;
-  group.add(sunglasses);
-
-  // 7. Retro Space Camera Prop (shown when orbiting Eros)
-  const cameraProp = new THREE.Group();
-  cameraProp.position.set(0.36, 0.28, 0.44);
-  const camBody = new THREE.Mesh(
-    new THREE.BoxGeometry(0.24, 0.17, 0.14),
-    new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.35, metalness: 0.4 }),
-  );
-  const camLens = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.065, 0.075, 0.12, 16),
-    darkMetalMat,
-  );
-  camLens.rotation.x = Math.PI / 2;
-  camLens.position.z = 0.09;
-  const camGlass = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.048, 0.048, 0.02, 16),
+  const feedPin = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 0.2, 8), darkMat);
+  feedPin.position.y = 0.1;
+  const feedTip = new THREE.Mesh(
+    new THREE.SphereGeometry(0.04, 10, 10),
     new THREE.MeshStandardMaterial({
       color: 0x38bdf8,
-      emissive: 0x0ea5e9,
-      emissiveIntensity: 0.5,
-      metalness: 0.9,
-      roughness: 0.1,
+      emissive: 0x0284c7,
+      emissiveIntensity: 0.65,
     }),
   );
-  camGlass.rotation.x = Math.PI / 2;
-  camGlass.position.z = 0.15;
-  const cameraFlashMesh = new THREE.Mesh(
-    new THREE.SphereGeometry(0.045, 12, 12),
-    new THREE.MeshBasicMaterial({ color: 0xffffff }),
-  );
-  cameraFlashMesh.position.set(0.08, 0.09, 0.07);
-  cameraProp.add(camBody, camLens, camGlass, cameraFlashMesh);
-  cameraProp.visible = false;
-  group.add(cameraProp);
+  feedTip.position.y = 0.2;
+  dishHolder.add(dish, feedPin, feedTip);
+  dishPivot.add(dishMast, dishHolder);
+  group.add(dishPivot);
+
+  // 6. Expressive Little Probe Arms (for waving, hugging, or holding camera)
+  const leftArm = new THREE.Group();
+  leftArm.position.set(-0.36, 0.34, 0.08);
+  const armL = new THREE.Mesh(new THREE.CapsuleGeometry(0.034, 0.18, 4, 8), aluminumMat);
+  armL.position.y = -0.09;
+  const handL = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 10), goldFoilMat);
+  handL.position.y = -0.2;
+  leftArm.add(armL, handL);
+
+  const rightArm = new THREE.Group();
+  rightArm.position.set(0.36, 0.34, 0.08);
+  const armR = new THREE.Mesh(new THREE.CapsuleGeometry(0.034, 0.18, 4, 8), aluminumMat);
+  armR.position.y = -0.09;
+  const handR = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 10), goldFoilMat);
+  handR.position.y = -0.2;
+  rightArm.add(armR, handR);
+
+  let cameraFlash: THREE.Mesh | null = null;
+  if (options.withCamera) {
+    const camBody = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.13, 0.1), darkMat);
+    camBody.position.set(0, -0.22, 0.08);
+    const camLens = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.045, 0.05, 0.07, 12),
+      aluminumMat,
+    );
+    camLens.rotation.x = Math.PI / 2;
+    camLens.position.set(0, -0.22, 0.15);
+    cameraFlash = new THREE.Mesh(
+      new THREE.SphereGeometry(0.05, 10, 10),
+      new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, opacity: 0.9 }),
+    );
+    cameraFlash.position.set(0.06, -0.15, 0.13);
+    rightArm.add(camBody, camLens, cameraFlash);
+    rightArm.rotation.x = -0.9;
+  }
+
+  group.add(leftArm, rightArm);
 
   return {
     group,
-    dishGroup,
-    wings,
-    visorMesh,
-    sunglasses,
-    cameraProp,
-    cameraFlashMesh,
-    thrusterFlames,
-    setMood: (mood: NearMood) => {
-      visorMat.map = moodTextures[mood];
-      visorMat.needsUpdate = true;
+    leftArm,
+    rightArm,
+    dishPivot,
+    solarWings,
+    cameraFlash,
+    setMood: (mood: ProbeMood) => {
+      faceMat.map = moodTextures[mood];
+      faceMat.needsUpdate = true;
     },
     dispose: () => {
       Object.values(moodTextures).forEach((t) => t.dispose());
       solarTex.dispose();
+    },
+  };
+}
+
+export interface ErosRig {
+  group: THREE.Group;
+  dispose: () => void;
+}
+
+/**
+ * Asteroid 433 Eros: Iconic elongated peanut-shaped rocky body.
+ * Optional `grandpa` variant gives Eros round glasses, white eyebrows,
+ * fluffy white mustache, and a golden-topped walking cane!
+ */
+export function createErosAsteroid(
+  maxAnisotropy = 4,
+  options: { grandpa?: boolean } = {},
+): ErosRig {
+  const group = new THREE.Group();
+  const erosTex = createAsteroidTexture('#9A8B7E', '#62564B', maxAnisotropy);
+  const erosMat = new THREE.MeshStandardMaterial({
+    map: erosTex,
+    roughness: 0.92,
+    metalness: 0.04,
+    flatShading: true,
+  });
+
+  // Deform an icosahedron into Eros's pinched peanut shape
+  const geo = new THREE.IcosahedronGeometry(0.75, 3);
+  const pos = geo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const vx = pos.getX(i);
+    const vy = pos.getY(i);
+    const vz = pos.getZ(i);
+    const nx = vx * 1.65;
+    const pinch = 0.72 + 0.34 * Math.pow(Math.abs(vx) / 0.75, 1.4);
+    const bendY = vy * pinch * 0.78 + 0.1 * Math.cos(vx * 3.1);
+    const bump = 1 + 0.08 * Math.sin(vx * 5.2 + vy * 4.1) * Math.cos(vz * 4.7);
+    pos.setXYZ(i, nx * bump, bendY * bump, vz * pinch * 0.8 * bump);
+  }
+  geo.computeVertexNormals();
+
+  const body = new THREE.Mesh(geo, erosMat);
+  body.castShadow = true;
+  body.receiveShadow = true;
+  group.add(body);
+
+  if (options.grandpa) {
+    const whiteMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.75 });
+    const goldMat = new THREE.MeshStandardMaterial({
+      color: 0xe8c574,
+      metalness: 0.85,
+      roughness: 0.25,
+    });
+    const darkMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3 });
+
+    // Friendly grandpa eyes behind round glasses
+    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 12), darkMat);
+    eyeL.position.set(-0.22, 0.16, 0.52);
+    const eyeR = eyeL.clone();
+    eyeR.position.x = 0.22;
+
+    const rimL = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.02, 10, 24), goldMat);
+    rimL.position.set(-0.22, 0.16, 0.56);
+    const rimR = rimL.clone();
+    rimR.position.x = 0.22;
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.025, 0.025), goldMat);
+    bridge.position.set(0, 0.17, 0.56);
+
+    // Fluffy white eyebrows
+    const browL = new THREE.Mesh(new THREE.CapsuleGeometry(0.045, 0.16, 4, 8), whiteMat);
+    browL.rotation.z = Math.PI / 2 + 0.15;
+    browL.position.set(-0.24, 0.32, 0.54);
+    const browR = browL.clone();
+    browR.rotation.z = Math.PI / 2 - 0.15;
+    browR.position.x = 0.24;
+
+    // Big handlebar white mustache!
+    const stacheL = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.22, 4, 8), whiteMat);
+    stacheL.rotation.z = Math.PI / 2 - 0.25;
+    stacheL.position.set(-0.14, -0.02, 0.56);
+    const stacheR = stacheL.clone();
+    stacheR.rotation.z = Math.PI / 2 + 0.25;
+    stacheR.position.x = 0.14;
+
+    // Little grandpa walking cane propped beside Eros
+    const caneShaft = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.032, 0.026, 0.95, 10),
+      new THREE.MeshStandardMaterial({ color: 0x7c2d12, roughness: 0.7 }),
+    );
+    caneShaft.position.set(0.88, -0.2, 0.35);
+    caneShaft.rotation.z = -0.18;
+    const caneHook = new THREE.Mesh(
+      new THREE.TorusGeometry(0.1, 0.032, 8, 16, Math.PI),
+      goldMat,
+    );
+    caneHook.position.set(0.7, 0.26, 0.35);
+    caneHook.rotation.z = -0.18;
+
+    group.add(
+      eyeL,
+      eyeR,
+      rimL,
+      rimR,
+      bridge,
+      browL,
+      browR,
+      stacheL,
+      stacheR,
+      caneShaft,
+      caneHook,
+    );
+  }
+
+  return {
+    group,
+    dispose: () => {
+      geo.dispose();
+      erosTex.dispose();
+      erosMat.dispose();
+    },
+  };
+}
+
+export interface MathildeRig {
+  group: THREE.Group;
+  leftArm: THREE.Group;
+  rightArm: THREE.Group;
+  dispose: () => void;
+}
+
+/**
+ * Asteroid 253 Mathilde: Dark charcoal-cratered asteroid friend with a cute face and waving arms.
+ */
+export function createMathildeAsteroid(maxAnisotropy = 4): MathildeRig {
+  const group = new THREE.Group();
+  const matTex = createAsteroidTexture('#585468', '#332F3F', maxAnisotropy);
+  const rockMat = new THREE.MeshStandardMaterial({
+    map: matTex,
+    roughness: 0.92,
+    metalness: 0.05,
+    flatShading: true,
+  });
+  const darkMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3 });
+  const cheekMat = new THREE.MeshStandardMaterial({ color: 0xf472b6, roughness: 0.5 });
+
+  const geo = new THREE.IcosahedronGeometry(0.68, 2);
+  const pos = geo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const y = pos.getY(i);
+    const z = pos.getZ(i);
+    const w = 1 + 0.1 * Math.sin(x * 4.1 + y * 3.2) * Math.cos(z * 3.8);
+    pos.setXYZ(i, x * 1.15 * w, y * 0.95 * w, z * 0.92 * w);
+  }
+  geo.computeVertexNormals();
+
+  const body = new THREE.Mesh(geo, rockMat);
+  body.position.y = 0.72;
+  body.castShadow = true;
+  group.add(body);
+
+  // Friendly eyes, rosy cheeks, and big smile
+  const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.065, 12, 12), darkMat);
+  eyeL.position.set(-0.2, 0.82, 0.58);
+  const eyeR = eyeL.clone();
+  eyeR.position.x = 0.2;
+
+  const gleamL = new THREE.Mesh(
+    new THREE.SphereGeometry(0.022, 8, 8),
+    new THREE.MeshBasicMaterial({ color: 0xffffff }),
+  );
+  gleamL.position.set(-0.22, 0.84, 0.635);
+  const gleamR = gleamL.clone();
+  gleamR.position.x = 0.18;
+
+  const cheekL = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 10), cheekMat);
+  cheekL.scale.set(1.2, 0.7, 0.5);
+  cheekL.position.set(-0.32, 0.7, 0.56);
+  const cheekR = cheekL.clone();
+  cheekR.position.x = 0.32;
+
+  const smile = new THREE.Mesh(
+    new THREE.TorusGeometry(0.11, 0.024, 8, 16, Math.PI),
+    new THREE.MeshBasicMaterial({ color: 0xffe066 }),
+  );
+  smile.rotation.z = Math.PI;
+  smile.position.set(0, 0.68, 0.61);
+
+  const leftArm = new THREE.Group();
+  leftArm.position.set(-0.72, 0.74, 0);
+  const armL = new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.24, 4, 8), rockMat);
+  armL.position.y = 0.12;
+  leftArm.add(armL);
+
+  const rightArm = new THREE.Group();
+  rightArm.position.set(0.72, 0.74, 0);
+  const armR = new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.24, 4, 8), rockMat);
+  armR.position.y = 0.12;
+  rightArm.add(armR);
+
+  group.add(body, eyeL, eyeR, gleamL, gleamR, cheekL, cheekR, smile, leftArm, rightArm);
+
+  return {
+    group,
+    leftArm,
+    rightArm,
+    dispose: () => {
+      geo.dispose();
+      matTex.dispose();
+      rockMat.dispose();
+    },
+  };
+}
+
+export function createErosGround(maxAnisotropy = 4): { group: THREE.Group; dispose: () => void } {
+  const group = new THREE.Group();
+  const tex = createAsteroidTexture('#9A8B7E', '#62564B', maxAnisotropy);
+  const mat = new THREE.MeshStandardMaterial({
+    map: tex,
+    roughness: 0.92,
+    metalness: 0.04,
+    flatShading: true,
+  });
+
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.35, 0.14, 32), mat);
+  base.position.y = 0.07;
+  base.receiveShadow = true;
+  group.add(base);
+
+  const rocks: [number, number, number, number][] = [
+    [-1.45, 0.22, 0.85, 0.22],
+    [1.55, 0.24, 0.75, 0.25],
+    [1.4, 0.2, -0.75, 0.2],
+    [-1.35, 0.2, -0.65, 0.18],
+  ];
+  for (const [rx, ry, rz, rs] of rocks) {
+    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(rs, 0), mat);
+    rock.position.set(rx, ry, rz);
+    rock.castShadow = true;
+    rock.receiveShadow = true;
+    group.add(rock);
+  }
+
+  return {
+    group,
+    dispose: () => {
+      tex.dispose();
+      mat.dispose();
     },
   };
 }
@@ -302,7 +496,6 @@ export function createEarth(maxAnisotropy = 4): THREE.Group {
   globe.receiveShadow = true;
   group.add(globe);
 
-  // Soft atmosphere glow halo
   const halo = new THREE.Mesh(
     new THREE.SphereGeometry(0.74, 24, 24),
     new THREE.MeshBasicMaterial({
@@ -315,172 +508,6 @@ export function createEarth(maxAnisotropy = 4): THREE.Group {
   halo.position.y = 0.72;
   group.add(halo);
 
-  // Little orbital ring stand
-  const baseRing = new THREE.Mesh(
-    new THREE.TorusGeometry(0.45, 0.035, 10, 28),
-    new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.7, roughness: 0.3 }),
-  );
-  baseRing.rotation.x = Math.PI / 2;
-  baseRing.position.y = 0.04;
-  group.add(baseRing);
-
-  return group;
-}
-
-export interface AsteroidOptions {
-  kind: 'eros' | 'mathilde' | 'grandpa-eros';
-  scale?: number;
-  maxAnisotropy?: number;
-}
-
-export function createAsteroid({
-  kind,
-  scale = 1,
-  maxAnisotropy = 4,
-}: AsteroidOptions): THREE.Group {
-  const group = new THREE.Group();
-  const isMathilde = kind === 'mathilde';
-  const tex = createAsteroidTexture(
-    isMathilde ? '#8D8699' : '#B98C6B',
-    isMathilde ? '#635C6E' : '#7D583F',
-    maxAnisotropy,
-  );
-
-  const geo = new THREE.IcosahedronGeometry(0.65, 2);
-  const pos = geo.attributes.position;
-  for (let i = 0; i < pos.count; i++) {
-    let x = pos.getX(i);
-    let y = pos.getY(i);
-    let z = pos.getZ(i);
-
-    // Sculpt Eros into its signature elongated potato shape, or Mathilde chunky
-    if (!isMathilde) {
-      x *= 1.48;
-      y *= 0.74;
-      z *= 0.85;
-    } else {
-      x *= 1.1;
-      y *= 0.95;
-      z *= 1.05;
-    }
-    const lump =
-      1 +
-      0.13 * Math.sin(x * 4.2 + y * 2.1) +
-      0.09 * Math.cos(z * 5.0 - x * 3.0);
-    pos.setXYZ(i, x * lump, y * lump, z * lump);
-  }
-  geo.computeVertexNormals();
-
-  const body = new THREE.Mesh(
-    geo,
-    new THREE.MeshStandardMaterial({
-      map: tex,
-      roughness: 0.88,
-      metalness: 0.06,
-      flatShading: true,
-    }),
-  );
-  body.position.y = 0.62;
-  body.castShadow = true;
-  body.receiveShadow = true;
-  group.add(body);
-
-  // Cute friendly face for Mathilde
-  if (kind === 'mathilde') {
-    const eyeMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.2 });
-    const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
-    const leftEye = new THREE.Mesh(new THREE.SphereGeometry(0.085, 14, 14), whiteMat);
-    leftEye.position.set(-0.2, 0.74, 0.62);
-    const rightEye = leftEye.clone();
-    rightEye.position.x = 0.2;
-    const leftPupil = new THREE.Mesh(new THREE.SphereGeometry(0.045, 12, 12), eyeMat);
-    leftPupil.position.set(-0.2, 0.74, 0.69);
-    const rightPupil = leftPupil.clone();
-    rightPupil.position.x = 0.2;
-
-    const smileCurve = new THREE.TorusGeometry(0.13, 0.022, 8, 16, Math.PI);
-    const smile = new THREE.Mesh(smileCurve, eyeMat);
-    smile.rotation.z = Math.PI;
-    smile.position.set(0, 0.56, 0.64);
-    group.add(leftEye, rightEye, leftPupil, rightPupil, smile);
-
-    // Little rocky waving pebble arm
-    const waveArm = new THREE.Group();
-    waveArm.name = 'mathildeWaveArm';
-    waveArm.position.set(-0.68, 0.68, 0.15);
-    const armRock = new THREE.Mesh(
-      new THREE.DodecahedronGeometry(0.14, 0),
-      new THREE.MeshStandardMaterial({ color: 0x8d8699, roughness: 0.85 }),
-    );
-    armRock.position.set(-0.14, 0.14, 0);
-    waveArm.add(armRock);
-    group.add(waveArm);
-  }
-
-  // Grandpa Eros accessories: fluffy white beard, round wire glasses, & cane!
-  if (kind === 'grandpa-eros') {
-    const beardMat = new THREE.MeshStandardMaterial({
-      color: 0xf8fafc,
-      roughness: 0.9,
-      metalness: 0.0,
-    });
-    const glassesMat = new THREE.MeshStandardMaterial({
-      color: 0xf5c451,
-      metalness: 0.9,
-      roughness: 0.2,
-    });
-    const eyeMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3 });
-
-    // Wise squinting eyes + round spectacles
-    const leftRim = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.018, 10, 20), glassesMat);
-    leftRim.position.set(-0.22, 0.76, 0.55);
-    const rightRim = leftRim.clone();
-    rightRim.position.x = 0.22;
-    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.02, 0.02), glassesMat);
-    bridge.position.set(0, 0.76, 0.55);
-
-    const leftEye = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 12), eyeMat);
-    leftEye.position.set(-0.22, 0.76, 0.52);
-    const rightEye = leftEye.clone();
-    rightEye.position.x = 0.22;
-
-    // Fluffy mustache & bushy eyebrows & beard puffs
-    const browL = new THREE.Mesh(new THREE.CapsuleGeometry(0.04, 0.12, 4, 8), beardMat);
-    browL.rotation.z = Math.PI / 2 - 0.15;
-    browL.position.set(-0.22, 0.92, 0.52);
-    const browR = browL.clone();
-    browR.rotation.z = Math.PI / 2 + 0.15;
-    browR.position.x = 0.22;
-
-    const beardGroup = new THREE.Group();
-    const puffOffsets = [
-      [0, 0.44, 0.54, 0.22],
-      [-0.16, 0.5, 0.5, 0.16],
-      [0.16, 0.5, 0.5, 0.16],
-      [0, 0.24, 0.5, 0.18],
-      [-0.1, 0.34, 0.52, 0.15],
-      [0.1, 0.34, 0.52, 0.15],
-    ];
-    for (const [px, py, pz, pr] of puffOffsets) {
-      const puff = new THREE.Mesh(new THREE.SphereGeometry(pr, 12, 12), beardMat);
-      puff.position.set(px, py, pz);
-      beardGroup.add(puff);
-    }
-
-    // Little wooden walking cane leaning beside Grandpa Eros
-    const caneGroup = new THREE.Group();
-    caneGroup.position.set(0.88, 0.05, 0.2);
-    const caneMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.7 });
-    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.75, 10), caneMat);
-    shaft.position.y = 0.38;
-    const hook = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.03, 10, 16, Math.PI), caneMat);
-    hook.position.set(-0.09, 0.75, 0);
-    caneGroup.add(shaft, hook);
-
-    group.add(leftRim, rightRim, bridge, leftEye, rightEye, browL, browR, beardGroup, caneGroup);
-  }
-
-  group.scale.setScalar(scale);
   return group;
 }
 
@@ -490,10 +517,131 @@ export interface CharacterRig {
   rightArm: THREE.Group;
 }
 
+export function createJacob(prop: 'none' | 'tablet' = 'none'): CharacterRig {
+  const group = new THREE.Group();
+  const jacketMat = new THREE.MeshStandardMaterial({ color: 0x0ea5e9, roughness: 0.5 });
+  const skinMat = new THREE.MeshStandardMaterial({ color: 0xf4c49c, roughness: 0.55 });
+  const hairMat = new THREE.MeshStandardMaterial({ color: 0x3b2314, roughness: 0.7 });
+  const pantsMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.55 });
+  const accentMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.4 });
+
+  const shoes = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 0.09, 14), pantsMat);
+  shoes.position.y = 0.045;
+  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.21, 0.46, 16), jacketMat);
+  torso.position.y = 0.31;
+  torso.castShadow = true;
+
+  const badge = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.04), accentMat);
+  badge.position.set(0.07, 0.43, 0.15);
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 20, 20), skinMat);
+  head.position.y = 0.71;
+  head.castShadow = true;
+
+  const hair = new THREE.Mesh(
+    new THREE.SphereGeometry(0.19, 18, 16, 0, Math.PI * 2, 0, Math.PI * 0.55),
+    hairMat,
+  );
+  hair.position.set(0, 0.74, -0.02);
+  hair.rotation.x = -0.2;
+
+  const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.026, 10, 10), pantsMat);
+  eyeL.position.set(-0.06, 0.72, 0.165);
+  const eyeR = eyeL.clone();
+  eyeR.position.x = 0.06;
+
+  const smile = new THREE.Mesh(
+    new THREE.TorusGeometry(0.048, 0.012, 8, 12, Math.PI),
+    pantsMat,
+  );
+  smile.rotation.z = Math.PI;
+  smile.position.set(0, 0.65, 0.17);
+
+  const leftArm = new THREE.Group();
+  leftArm.position.set(-0.2, 0.51, 0);
+  const armL = new THREE.Mesh(new THREE.CapsuleGeometry(0.048, 0.2, 4, 8), jacketMat);
+  armL.position.y = -0.11;
+  leftArm.add(armL);
+
+  const rightArm = new THREE.Group();
+  rightArm.position.set(0.2, 0.51, 0);
+  const armR = new THREE.Mesh(new THREE.CapsuleGeometry(0.048, 0.2, 4, 8), jacketMat);
+  armR.position.y = -0.11;
+  rightArm.add(armR);
+
+  if (prop === 'tablet') {
+    const tab = new THREE.Mesh(
+      new THREE.BoxGeometry(0.22, 0.16, 0.02),
+      new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.4 }),
+    );
+    tab.position.set(0, -0.2, 0.12);
+    tab.rotation.x = -0.4;
+    rightArm.add(tab);
+  }
+
+  group.add(shoes, torso, badge, head, hair, eyeL, eyeR, smile, leftArm, rightArm);
+  return { group, leftArm, rightArm };
+}
+
+export function createLily(): CharacterRig {
+  const group = new THREE.Group();
+  const jacketMat = new THREE.MeshStandardMaterial({ color: 0xa855f7, roughness: 0.5 });
+  const skinMat = new THREE.MeshStandardMaterial({ color: 0xf8d0b0, roughness: 0.55 });
+  const hairMat = new THREE.MeshStandardMaterial({ color: 0x6b3a24, roughness: 0.65 });
+  const darkMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.5 });
+
+  const shoes = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.15, 0.09, 14), darkMat);
+  shoes.position.y = 0.045;
+  const dress = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.23, 0.46, 16), jacketMat);
+  dress.position.y = 0.31;
+  dress.castShadow = true;
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.175, 20, 20), skinMat);
+  head.position.y = 0.7;
+  head.castShadow = true;
+
+  const hair = new THREE.Mesh(
+    new THREE.SphereGeometry(0.186, 18, 16, 0, Math.PI * 2, 0, Math.PI * 0.58),
+    hairMat,
+  );
+  hair.position.set(0, 0.72, -0.02);
+  hair.rotation.x = -0.25;
+
+  const bun = new THREE.Mesh(new THREE.SphereGeometry(0.085, 12, 12), hairMat);
+  bun.position.set(0, 0.86, -0.13);
+
+  const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.025, 10, 10), darkMat);
+  eyeL.position.set(-0.058, 0.71, 0.16);
+  const eyeR = eyeL.clone();
+  eyeR.position.x = 0.058;
+
+  const smile = new THREE.Mesh(
+    new THREE.TorusGeometry(0.045, 0.011, 8, 12, Math.PI),
+    darkMat,
+  );
+  smile.rotation.z = Math.PI;
+  smile.position.set(0, 0.64, 0.165);
+
+  const leftArm = new THREE.Group();
+  leftArm.position.set(-0.19, 0.5, 0);
+  const armL = new THREE.Mesh(new THREE.CapsuleGeometry(0.045, 0.19, 4, 8), jacketMat);
+  armL.position.y = -0.1;
+  leftArm.add(armL);
+
+  const rightArm = new THREE.Group();
+  rightArm.position.set(0.19, 0.5, 0);
+  const armR = new THREE.Mesh(new THREE.CapsuleGeometry(0.045, 0.19, 4, 8), jacketMat);
+  armR.position.y = -0.1;
+  rightArm.add(armR);
+
+  group.add(shoes, dress, head, hair, bun, eyeL, eyeR, smile, leftArm, rightArm);
+  return { group, leftArm, rightArm };
+}
+
 export function createScientist(
   hairColor = 0x4a3525,
   shirtColor = 0x38bdf8,
-  prop: 'none' | 'clipboard' | 'megaphone' | 'heart' = 'none',
+  prop: 'none' | 'clipboard' | 'tablet' = 'none',
 ): CharacterRig {
   const group = new THREE.Group();
   const coatMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.6 });
@@ -502,7 +650,6 @@ export function createScientist(
   const hairMat = new THREE.MeshStandardMaterial({ color: hairColor, roughness: 0.7 });
   const darkMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4 });
 
-  // Shoes & lab coat body (bottom-center pivot at y=0)
   const shoes = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 0.09, 14), darkMat);
   shoes.position.y = 0.045;
   const coat = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.22, 0.48, 16), coatMat);
@@ -512,7 +659,6 @@ export function createScientist(
   const tie = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.22, 0.04), shirtMat);
   tie.position.set(0, 0.43, 0.16);
 
-  // Head + hair + glasses
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 20, 20), skinMat);
   head.position.y = 0.72;
   head.castShadow = true;
@@ -534,7 +680,6 @@ export function createScientist(
   const specR = specL.clone();
   specR.position.x = 0.06;
 
-  // Articulated arms
   const leftArm = new THREE.Group();
   leftArm.position.set(-0.2, 0.52, 0);
   const armMeshL = new THREE.Mesh(new THREE.CapsuleGeometry(0.048, 0.2, 4, 8), coatMat);
@@ -555,112 +700,72 @@ export function createScientist(
     board.position.set(0, -0.22, 0.1);
     board.rotation.x = -0.5;
     rightArm.add(board);
-  } else if (prop === 'megaphone') {
-    const cone = new THREE.Mesh(
-      new THREE.ConeGeometry(0.09, 0.2, 14, 1, true),
-      new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.35, side: THREE.DoubleSide }),
+  } else if (prop === 'tablet') {
+    const tab = new THREE.Mesh(
+      new THREE.BoxGeometry(0.22, 0.16, 0.02),
+      new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.4 }),
     );
-    cone.rotation.x = -Math.PI / 2;
-    cone.position.set(0, -0.2, 0.14);
-    rightArm.add(cone);
-  } else if (prop === 'heart') {
-    const heart = createHeartMesh(0xf43f5e, 0.18);
-    heart.position.set(0, 0.02, 0.26);
-    group.add(heart);
+    tab.position.set(0, -0.2, 0.12);
+    tab.rotation.x = -0.4;
+    rightArm.add(tab);
   }
 
   group.add(shoes, coat, tie, head, hair, eyeL, eyeR, specL, specR, leftArm, rightArm);
   return { group, leftArm, rightArm };
 }
 
-export function createKidCharacter(
-  variant: 'jacob-casual' | 'jacob-astronaut' | 'lily',
-): CharacterRig {
+/**
+ * Jacob in an Astronaut Suit with royal-purple trim and clear-tinted visor showing his happy face!
+ */
+export function createAstronautJacob(): CharacterRig {
   const group = new THREE.Group();
-  const isAstro = variant === 'jacob-astronaut';
-  const isLily = variant === 'lily';
-
-  const suitMat = new THREE.MeshStandardMaterial({
-    color: isAstro ? 0xf8fafc : isLily ? 0xec4899 : 0x3b82f6,
-    roughness: 0.42,
-    metalness: isAstro ? 0.15 : 0.05,
+  const suitMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.45 });
+  const trimMat = new THREE.MeshStandardMaterial({ color: 0x7c3aed, roughness: 0.35 });
+  const visorMat = new THREE.MeshStandardMaterial({
+    color: 0xfbbf24,
+    metalness: 0.72,
+    roughness: 0.18,
   });
-  const trimMat = new THREE.MeshStandardMaterial({
-    color: isAstro ? 0x2563eb : 0xfacc15,
-    roughness: 0.35,
-  });
-  const skinMat = new THREE.MeshStandardMaterial({ color: 0xf4c29c, roughness: 0.55 });
-  const darkMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4 });
+  const darkMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.5 });
 
-  // Boots + Torso
-  const boots = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.14, 0.16, 0.12, 14),
-    isAstro ? trimMat : darkMat,
-  );
-  boots.position.y = 0.06;
+  const bootL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.18), darkMat);
+  bootL.position.set(-0.08, 0.06, 0.02);
+  const bootR = bootL.clone();
+  bootR.position.x = 0.08;
 
-  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.17, 0.24, 6, 12), suitMat);
-  torso.position.y = 0.33;
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.18, 0.26, 6, 12), suitMat);
+  torso.position.y = 0.35;
   torso.castShadow = true;
 
-  const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.06, 14), trimMat);
-  belt.position.y = 0.25;
+  const pack = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.34, 0.15), suitMat);
+  pack.position.set(0, 0.4, -0.18);
 
-  // Head
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 20, 20), skinMat);
-  head.position.y = 0.68;
-  head.castShadow = true;
+  const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.05, 14), trimMat);
+  belt.position.y = 0.27;
 
-  const hairColor = isLily ? 0x3b2314 : 0x271911;
-  const hair = new THREE.Mesh(
-    new THREE.SphereGeometry(0.19, 18, 14, 0, Math.PI * 2, 0, Math.PI * 0.58),
-    new THREE.MeshStandardMaterial({ color: hairColor, roughness: 0.75 }),
+  const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.2, 20, 20), suitMat);
+  helmet.position.y = 0.7;
+  helmet.castShadow = true;
+
+  const visor = new THREE.Mesh(
+    new THREE.SphereGeometry(0.175, 20, 16, -Math.PI * 0.38, Math.PI * 0.76, Math.PI * 0.2, Math.PI * 0.52),
+    visorMat,
   );
-  hair.position.set(0, 0.71, -0.02);
-  hair.rotation.x = -0.25;
+  visor.position.set(0, 0.7, 0.045);
 
-  const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.026, 10, 10), darkMat);
-  eyeL.position.set(-0.06, 0.69, 0.16);
-  const eyeR = eyeL.clone();
-  eyeR.position.x = 0.06;
-
-  // Astronaut backpack & glass bubble helmet
-  if (isAstro) {
-    const pack = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.32, 0.16), suitMat);
-    pack.position.set(0, 0.38, -0.18);
-    const helmetRing = new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.03, 10, 24), trimMat);
-    helmetRing.rotation.x = Math.PI / 2;
-    helmetRing.position.y = 0.53;
-    const helmetGlass = new THREE.Mesh(
-      new THREE.SphereGeometry(0.24, 24, 24),
-      new THREE.MeshPhysicalMaterial({
-        color: 0xcbeafe,
-        transparent: true,
-        opacity: 0.32,
-        roughness: 0.08,
-        metalness: 0.1,
-        depthWrite: false,
-      }),
-    );
-    helmetGlass.position.y = 0.69;
-    helmetGlass.renderOrder = 5;
-    group.add(pack, helmetRing, helmetGlass);
-  }
-
-  // Arms
   const leftArm = new THREE.Group();
-  leftArm.position.set(-0.2, 0.48, 0);
-  const armL = new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.22, 4, 8), suitMat);
+  leftArm.position.set(-0.22, 0.48, 0);
+  const armL = new THREE.Mesh(new THREE.CapsuleGeometry(0.052, 0.22, 4, 8), suitMat);
   armL.position.y = -0.1;
   leftArm.add(armL);
 
   const rightArm = new THREE.Group();
-  rightArm.position.set(0.2, 0.48, 0);
-  const armR = new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.22, 4, 8), suitMat);
+  rightArm.position.set(0.22, 0.48, 0);
+  const armR = new THREE.Mesh(new THREE.CapsuleGeometry(0.052, 0.22, 4, 8), suitMat);
   armR.position.y = -0.1;
   rightArm.add(armR);
 
-  group.add(boots, torso, belt, head, hair, eyeL, eyeR, leftArm, rightArm);
+  group.add(bootL, bootR, torso, pack, belt, helmet, visor, leftArm, rightArm);
   return { group, leftArm, rightArm };
 }
 
@@ -697,6 +802,44 @@ export function createRadioDish(): THREE.Group {
   dishPivot.add(dish, tip);
 
   group.add(ped, mast, dishPivot);
+  return group;
+}
+
+export function createScanMonitor(maxAnisotropy = 4): { mesh: THREE.Group; dispose: () => void } {
+  const group = new THREE.Group();
+  const stand = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.08, 0.14, 0.28, 12),
+    new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.5, roughness: 0.4 }),
+  );
+  stand.position.y = 0.14;
+  const chartTex = createScanChartTexture(maxAnisotropy);
+  const screen = new THREE.Mesh(
+    new THREE.BoxGeometry(0.92, 0.48, 0.05),
+    new THREE.MeshStandardMaterial({ map: chartTex, roughness: 0.3 }),
+  );
+  screen.position.y = 0.52;
+  group.add(stand, screen);
+  return { mesh: group, dispose: () => chartTex.dispose() };
+}
+
+export function createLightbulbIdea(): THREE.Group {
+  const group = new THREE.Group();
+  const bulb = new THREE.Mesh(
+    new THREE.SphereGeometry(0.16, 16, 16),
+    new THREE.MeshStandardMaterial({
+      color: 0xffe066,
+      emissive: 0xfacc15,
+      emissiveIntensity: 0.85,
+      roughness: 0.2,
+    }),
+  );
+  bulb.position.y = 0.18;
+  const base = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.07, 0.06, 0.1, 10),
+    new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.7, roughness: 0.3 }),
+  );
+  base.position.y = 0.02;
+  group.add(bulb, base);
   return group;
 }
 
@@ -774,7 +917,6 @@ export interface BookShellRig {
   popupTextPivot: THREE.Group;
   popupTextMesh: THREE.Mesh;
   updateFlipCurl: (progress: number, direction: 1 | -1) => void;
-  setFlippingPageTexture: (texture: THREE.Texture | null) => void;
   setPageTextures: (leftTex: THREE.Texture, rightTex: THREE.Texture) => void;
   setPopupTextTexture: (tex: THREE.Texture) => void;
 }
@@ -794,14 +936,15 @@ export function createBookShell(maxAnisotropy = 4): BookShellRig {
     metalness: 0.86,
     roughness: 0.26,
   });
-  const leatherMat = new THREE.MeshStandardMaterial({
-    color: 0x0a132e,
+  // Rich dark purple leather binding material
+  const darkPurpleLeatherMat = new THREE.MeshStandardMaterial({
+    color: 0x260b42,
     roughness: 0.72,
     metalness: 0.08,
     envMapIntensity: 0.3,
   });
   const paperEdgeMat = new THREE.MeshStandardMaterial({
-    color: 0x454a57,
+    color: 0x2b1442,
     roughness: 1.0,
     metalness: 0.0,
     envMapIntensity: 0.03,
@@ -811,13 +954,12 @@ export function createBookShell(maxAnisotropy = 4): BookShellRig {
   const spineGroup = new THREE.Group();
   const spineBase = new THREE.Mesh(
     new THREE.BoxGeometry(0.42, 0.16, coverD),
-    leatherMat,
+    darkPurpleLeatherMat,
   );
   spineBase.position.y = -0.06;
   spineBase.receiveShadow = true;
   spineGroup.add(spineBase);
 
-  // Raised gold spine ribs
   for (let z = -2.1; z <= 2.1; z += 1.05) {
     const rib = new THREE.Mesh(
       new THREE.BoxGeometry(0.46, 0.04, 0.14),
@@ -828,17 +970,17 @@ export function createBookShell(maxAnisotropy = 4): BookShellRig {
   }
   root.add(spineGroup);
 
-  // 2. Right Hardcover Base (fixed right side when open)
+  // 2. Right Hardcover Base
   const backCoverTex = createBackCoverTexture(maxAnisotropy);
   const backCoverBoard = new THREE.Mesh(
     new THREE.BoxGeometry(coverW, coverH, coverD),
     [
-      leatherMat,
-      leatherMat,
-      leatherMat,
+      darkPurpleLeatherMat,
+      darkPurpleLeatherMat,
+      darkPurpleLeatherMat,
       new THREE.MeshStandardMaterial({ map: backCoverTex, roughness: 0.6 }),
-      leatherMat,
-      leatherMat,
+      darkPurpleLeatherMat,
+      darkPurpleLeatherMat,
     ],
   );
   backCoverBoard.position.set(coverW / 2 + 0.12, -0.05, 0);
@@ -846,7 +988,6 @@ export function createBookShell(maxAnisotropy = 4): BookShellRig {
   backCoverBoard.castShadow = true;
   root.add(backCoverBoard);
 
-  // Gold corner clasps on right board
   const cornerGeo = new THREE.BoxGeometry(0.32, coverH + 0.03, 0.32);
   const brCorner = new THREE.Mesh(cornerGeo, goldMat);
   brCorner.position.set(coverW + 0.02, -0.05, coverD / 2 - 0.12);
@@ -854,7 +995,7 @@ export function createBookShell(maxAnisotropy = 4): BookShellRig {
   trCorner.position.z = -coverD / 2 + 0.12;
   root.add(brCorner, trCorner);
 
-  // Right Paper Block + Right Page Surface
+  // Right Paper Block & Surface
   const rightPageBlock = new THREE.Mesh(
     new THREE.BoxGeometry(pageW, pageH, pageD),
     paperEdgeMat,
@@ -878,7 +1019,7 @@ export function createBookShell(maxAnisotropy = 4): BookShellRig {
   rightPageMesh.receiveShadow = true;
   root.add(rightPageMesh);
 
-  // 3. Front Cover + Left Paper Block (pivots around spine x=0 from closed to open!)
+  // 3. Front Dark Purple Cover + Left Paper Block
   const frontCoverPivot = new THREE.Group();
   frontCoverPivot.position.set(0.08, 0.04, 0);
 
@@ -890,16 +1031,15 @@ export function createBookShell(maxAnisotropy = 4): BookShellRig {
     envMapIntensity: 0.25,
   });
 
-  // Top face of frontCoverBoard is visible when closed (rotation.z = 0)
   const frontCoverBoard = new THREE.Mesh(
     new THREE.BoxGeometry(coverW, coverH, coverD),
     [
-      leatherMat,
-      leatherMat,
+      darkPurpleLeatherMat,
+      darkPurpleLeatherMat,
       coverFrontMat,
-      leatherMat,
-      leatherMat,
-      leatherMat,
+      darkPurpleLeatherMat,
+      darkPurpleLeatherMat,
+      darkPurpleLeatherMat,
     ],
   );
   frontCoverBoard.position.set(coverW / 2 + 0.04, 0.27, 0);
@@ -907,23 +1047,33 @@ export function createBookShell(maxAnisotropy = 4): BookShellRig {
   frontCoverBoard.receiveShadow = true;
   frontCoverPivot.add(frontCoverBoard);
 
-  // Miniature 3D Cover Medallion (Eros + tiny gold ring on front cover!)
+  // Miniature 3D Cover Medallion: Gold Ring + Mini Peanut Asteroid Eros + Mini 4-Wing NEAR Probe Emblem!
   const medallionGroup = new THREE.Group();
-  medallionGroup.position.set(coverW / 2 + 0.04, 0.36, 0.35);
+  medallionGroup.position.set(coverW / 2 + 0.04, 0.36, 0.38);
   const medRing = new THREE.Mesh(
     new THREE.TorusGeometry(0.68, 0.04, 12, 32),
     goldMat,
   );
   medRing.rotation.x = Math.PI / 2;
-  const medRock = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(0.32, 1),
-    new THREE.MeshStandardMaterial({ color: 0xd99b66, roughness: 0.65, metalness: 0.2 }),
+  const medEros = new THREE.Mesh(
+    new THREE.SphereGeometry(0.28, 16, 16),
+    new THREE.MeshStandardMaterial({ color: 0x9a8b7e, roughness: 0.78, metalness: 0.08 }),
   );
-  medRock.scale.set(1.4, 0.55, 0.9);
-  medallionGroup.add(medRing, medRock);
+  medEros.scale.set(1.45, 0.35, 0.75);
+  medEros.rotation.y = 0.3;
+
+  const medProbeBus = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.12, 0.12, 0.14, 8),
+    goldMat,
+  );
+  medProbeBus.position.y = 0.2;
+  const medWingA = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.025, 0.12), goldMat);
+  medWingA.position.y = 0.22;
+  const medWingB = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.025, 0.56), goldMat);
+  medWingB.position.y = 0.22;
+  medallionGroup.add(medRing, medEros, medProbeBus, medWingA, medWingB);
   frontCoverPivot.add(medallionGroup);
 
-  // Left Page Block attached on the inside face of the Front Cover (visible when cover opens to PI)
   const leftPageBlock = new THREE.Mesh(
     new THREE.BoxGeometry(pageW, pageH, pageD),
     paperEdgeMat,
@@ -942,7 +1092,6 @@ export function createBookShell(maxAnisotropy = 4): BookShellRig {
     new THREE.PlaneGeometry(pageW, pageD),
     leftPageMat,
   );
-  // Facing -Y locally so when cover rotates Math.PI around Z, it faces +Y!
   leftPageMesh.rotation.x = Math.PI / 2;
   leftPageMesh.rotation.z = Math.PI;
   leftPageMesh.position.set(pageW / 2 + 0.02, -0.035, 0);
@@ -951,18 +1100,18 @@ export function createBookShell(maxAnisotropy = 4): BookShellRig {
 
   root.add(frontCoverPivot);
 
-  // 4. Flexible Deforming Flipping Page Sheet
+  // 4. Flexible Flipping Page Sheet
   const flippingPageGroup = new THREE.Group();
   flippingPageGroup.position.set(0, 0.25, 0);
   flippingPageGroup.visible = false;
 
   const flipGeo = new THREE.PlaneGeometry(pageW, pageD, 24, 2);
   flipGeo.rotateX(-Math.PI / 2);
-  flipGeo.translate(pageW / 2, 0, 0); // Pivot at spine x=0
+  flipGeo.translate(pageW / 2, 0, 0);
   const baseFlipPos = Float32Array.from(flipGeo.attributes.position.array);
 
   const flipMat = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
+    color: 0x33184a,
     roughness: 1.0,
     metalness: 0.0,
     envMapIntensity: 0.03,
@@ -973,8 +1122,7 @@ export function createBookShell(maxAnisotropy = 4): BookShellRig {
   flippingPageGroup.add(flippingPageMesh);
   root.add(flippingPageGroup);
 
-  // 5. 90-Degree Upright Pop-Up Story Text Pivot (zero background box behind text!)
-  // Anchored along the back crease of the open book, standing vertically at 90 degrees!
+  // 5. 90-Degree Upright Pop-Up Story Text Pivot
   const popupTextPivot = new THREE.Group();
   popupTextPivot.position.set(0, 0.25, -2.05);
 
@@ -988,18 +1136,17 @@ export function createBookShell(maxAnisotropy = 4): BookShellRig {
     new THREE.PlaneGeometry(8.1, 3.0),
     popupTextMat,
   );
-  // Positioned high enough above the book spread so 3D models never block the words!
   popupTextMesh.position.set(0, 2.55, 0);
   popupTextMesh.renderOrder = 25;
   popupTextPivot.add(popupTextMesh);
   root.add(popupTextPivot);
 
-  // Subtle glow halo sprite under the book in space
+  // Royal violet glow halo beneath the book
   const glowTex = createGlowSpriteTexture();
   const spaceAura = new THREE.Sprite(
     new THREE.SpriteMaterial({
       map: glowTex,
-      color: 0x3b82f6,
+      color: 0x7e22ce,
       transparent: true,
       opacity: 0.22,
       depthWrite: false,
@@ -1019,7 +1166,7 @@ export function createBookShell(maxAnisotropy = 4): BookShellRig {
       const bx = baseFlipPos[i * 3];
       const by = baseFlipPos[i * 3 + 1];
       const bz = baseFlipPos[i * 3 + 2];
-      const u = bx / pageW; // 0 at spine, 1 at outer edge
+      const u = bx / pageW;
       const bend = Math.sin(u * Math.PI) * 0.42 * arch;
       const localAngle = angle - u * 0.18 * arch * direction;
       const rx = bx * Math.cos(localAngle) - (by + bend) * Math.sin(localAngle);
@@ -1033,7 +1180,6 @@ export function createBookShell(maxAnisotropy = 4): BookShellRig {
   let prevLeftTex: THREE.Texture | null = null;
   let prevRightTex: THREE.Texture | null = null;
   let prevPopupTex: THREE.Texture | null = null;
-  let prevFlipTex: THREE.Texture | null = null;
 
   return {
     root,
@@ -1046,13 +1192,6 @@ export function createBookShell(maxAnisotropy = 4): BookShellRig {
     popupTextPivot,
     popupTextMesh,
     updateFlipCurl,
-    setFlippingPageTexture: (tex) => {
-      if (prevFlipTex === tex) return;
-      if (prevFlipTex) prevFlipTex.dispose();
-      prevFlipTex = tex;
-      flipMat.map = tex;
-      flipMat.needsUpdate = true;
-    },
     setPageTextures: (leftTex, rightTex) => {
       if (prevLeftTex) prevLeftTex.dispose();
       if (prevRightTex) prevRightTex.dispose();

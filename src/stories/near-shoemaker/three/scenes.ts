@@ -1,17 +1,22 @@
 import * as THREE from 'three';
 import type { StorySceneId } from '../story/storyData';
 import {
-  createAsteroid,
+  createAstronautJacob,
   createEarth,
+  createErosAsteroid,
+  createErosGround,
   createHeartMesh,
-  createKidCharacter,
+  createJacob,
+  createLightbulbIdea,
+  createLily,
+  createMathildeAsteroid,
   createNearProbe,
   createRadioDish,
+  createScanMonitor,
   createScientist,
   createStarMesh,
-  type CharacterRig,
-  type NearProbeRig,
 } from './models';
+import { createBadgeTexture } from './textures';
 
 export interface ActiveDiorama {
   group: THREE.Group;
@@ -19,60 +24,18 @@ export interface ActiveDiorama {
   dispose: () => void;
 }
 
-function createSymbolExclamation(color = 0xffe066): THREE.Group {
-  const g = new THREE.Group();
-  const mat = new THREE.MeshStandardMaterial({
-    color,
-    emissive: color,
-    emissiveIntensity: 0.35,
-    roughness: 0.3,
-  });
-  const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.035, 0.34, 10), mat);
-  bar.position.y = 0.24;
-  const dot = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 10), mat);
-  dot.position.y = 0.0;
-  g.add(bar, dot);
-  return g;
-}
-
-function createSymbolQuestion(color = 0xff8a80): THREE.Group {
-  const g = new THREE.Group();
-  const mat = new THREE.MeshStandardMaterial({
-    color,
-    emissive: color,
-    emissiveIntensity: 0.35,
-    roughness: 0.3,
-  });
-  const arc = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.035, 8, 16, Math.PI * 1.4), mat);
-  arc.position.y = 0.3;
-  arc.rotation.z = -0.35;
-  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.14, 8), mat);
-  stem.position.y = 0.14;
-  const dot = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 10), mat);
-  dot.position.y = 0.01;
-  g.add(arc, stem, dot);
-  return g;
-}
-
-function createPhotoTile(): THREE.Group {
-  const g = new THREE.Group();
-  const frame = new THREE.Mesh(
-    new THREE.BoxGeometry(0.46, 0.52, 0.03),
-    new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.4 }),
+function createMilestoneSign(
+  label: string,
+  bgHex: string,
+  textHex: string,
+  maxAnisotropy: number,
+): { mesh: THREE.Mesh; dispose: () => void } {
+  const tex = createBadgeTexture(label, bgHex, textHex, maxAnisotropy);
+  const mesh = new THREE.Mesh(
+    new THREE.BoxGeometry(1.05, 0.46, 0.05),
+    new THREE.MeshStandardMaterial({ map: tex, roughness: 0.35 }),
   );
-  const picture = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.36, 0.34),
-    new THREE.MeshBasicMaterial({ color: 0x38bdf8 }),
-  );
-  picture.position.set(0, 0.04, 0.018);
-  const miniRock = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(0.09, 0),
-    new THREE.MeshStandardMaterial({ color: 0xd99b66, roughness: 0.7 }),
-  );
-  miniRock.scale.set(1.3, 0.7, 0.4);
-  miniRock.position.set(0, 0.04, 0.03);
-  g.add(frame, picture, miniRock);
-  return g;
+  return { mesh, dispose: () => tex.dispose() };
 }
 
 export function buildStoryDiorama(
@@ -90,537 +53,536 @@ export function buildStoryDiorama(
     };
   }
 
-  const near: NearProbeRig = createNearProbe(maxAnisotropy);
-  disposables.push(near);
-
-  // Per-scene custom animated actors
   let updateFn: (elapsed: number, delta: number, actionBoost: number) => void = () => {};
 
   if (sceneId === 'meet-near') {
-    near.setMood('happy');
-    near.group.position.set(0, 0.65, 0.25);
-    near.group.scale.setScalar(1.05);
-    group.add(near.group);
+    // Showcase plinth for NEAR Shoemaker with Jacob (narrator) and Lily
+    const stand = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.9, 1.05, 0.14, 24),
+      new THREE.MeshStandardMaterial({ color: 0x3b1564, roughness: 0.45, metalness: 0.25 }),
+    );
+    stand.position.y = 0.07;
+    stand.receiveShadow = true;
+    group.add(stand);
 
-    const jacob: CharacterRig = createKidCharacter('jacob-casual');
-    jacob.group.position.set(-1.95, 0, 0.75);
-    jacob.group.rotation.y = 0.42;
-    group.add(jacob.group);
+    const probe = createNearProbe(maxAnisotropy);
+    probe.setMood('happy');
+    probe.group.position.set(0, 0.14, 0.2);
+    probe.group.scale.setScalar(1.05);
+    disposables.push(probe);
+    group.add(probe.group);
 
-    const lily: CharacterRig = createKidCharacter('lily');
-    lily.group.position.set(1.95, 0, 0.75);
-    lily.group.rotation.y = -0.42;
-    group.add(lily.group);
+    const jacob = createJacob('tablet');
+    jacob.group.position.set(-1.35, 0, 0.7);
+    jacob.group.rotation.y = 0.45;
+    const lily = createLily();
+    lily.group.position.set(1.35, 0, 0.7);
+    lily.group.rotation.y = -0.45;
+    group.add(jacob.group, lily.group);
 
-    const stars = [createStarMesh(0xffe066, 0.14), createStarMesh(0x7ce8ff, 0.12)];
-    stars[0].position.set(-1.1, 1.5, -0.3);
-    stars[1].position.set(1.1, 1.55, -0.2);
+    const stars = [createStarMesh(0xffe066, 0.14), createStarMesh(0xd8b4fe, 0.12)];
+    stars[0].position.set(-0.85, 1.55, 0.2);
+    stars[1].position.set(0.85, 1.55, 0.2);
     group.add(stars[0], stars[1]);
 
     updateFn = (t, _dt, boost) => {
-      near.group.position.y = 0.65 + Math.sin(t * 2.2) * 0.12 + boost * 0.35;
-      near.group.rotation.y = Math.sin(t * 0.8) * 0.25 + boost * Math.PI * 2;
-      near.dishGroup.rotation.y = t * 1.1;
-      jacob.rightArm.rotation.z = 2.4 + Math.sin(t * 6) * 0.35;
-      lily.leftArm.rotation.z = -2.4 - Math.sin(t * 6 + 0.5) * 0.35;
-      stars[0].rotation.y = t * 1.6;
+      probe.group.rotation.y = Math.sin(t * 0.8) * 0.28 + boost * 1.5;
+      probe.rightArm.rotation.z = 2.3 + Math.sin(t * 5 + boost * 4) * 0.35;
+      jacob.leftArm.rotation.z = -2.2 - Math.sin(t * 4.5) * 0.25;
+      lily.rightArm.rotation.z = 2.2 + Math.cos(t * 4.5) * 0.25;
+      stars[0].rotation.y = t * 1.8;
       stars[1].rotation.y = -t * 1.8;
     };
-  } else if (sceneId === 'mission') {
+  } else if (sceneId === 'leaving-earth') {
     const earth = createEarth(maxAnisotropy);
-    earth.position.set(-2.05, 0.1, 0.45);
+    earth.position.set(-1.95, 0.15, 0.3);
     earth.scale.setScalar(0.85);
     group.add(earth);
 
+    const eros = createErosAsteroid(maxAnisotropy);
+    eros.group.position.set(2.1, 0.85, 0.15);
+    eros.group.scale.setScalar(0.58);
+    disposables.push(eros);
+    group.add(eros.group);
+
+    // Scientist friends, Jacob, and Lily waving goodbye!
+    const jacob = createJacob();
+    jacob.group.position.set(-1.35, 0, 1.25);
+    jacob.group.rotation.y = 0.4;
+    const lily = createLily();
+    lily.group.position.set(-0.75, 0, 1.35);
+    lily.group.rotation.y = 0.25;
     const sci = createScientist(0x4a3525, 0x38bdf8, 'clipboard');
-    sci.group.position.set(-1.15, 0, 1.35);
-    sci.group.rotation.y = 0.5;
-    group.add(sci.group);
+    sci.group.position.set(-1.9, 0, 1.35);
+    sci.group.rotation.y = 0.55;
+    group.add(jacob.group, lily.group, sci.group);
 
-    const eros = createAsteroid({ kind: 'eros', scale: 0.9, maxAnisotropy });
-    eros.position.set(2.1, 0.35, 0.2);
-    group.add(eros);
+    // Trajectory dots
+    const dots: THREE.Mesh[] = [];
+    for (let i = 0; i < 6; i++) {
+      const dot = new THREE.Mesh(
+        new THREE.SphereGeometry(0.05, 10, 10),
+        new THREE.MeshBasicMaterial({ color: 0xffe066 }),
+      );
+      const u = (i + 1) / 7;
+      dot.position.set(
+        THREE.MathUtils.lerp(-1.2, 1.5, u),
+        0.75 + Math.sin(u * Math.PI) * 0.85,
+        0.25,
+      );
+      group.add(dot);
+      dots.push(dot);
+    }
 
-    near.setMood('normal');
-    near.group.scale.setScalar(0.75);
-    group.add(near.group);
+    const probe = createNearProbe(maxAnisotropy);
+    probe.setMood('happy');
+    probe.group.scale.setScalar(0.68);
+    disposables.push(probe);
+    group.add(probe.group);
 
-    // Dotted glowing mission arc from Earth to Eros
-    const arcDots: THREE.Mesh[] = [];
-    const dotGeo = new THREE.SphereGeometry(0.055, 10, 10);
-    const dotMat = new THREE.MeshBasicMaterial({ color: 0xffe066 });
-    for (let i = 0; i <= 10; i++) {
-      const u = i / 10;
-      const x = THREE.MathUtils.lerp(-1.4, 1.5, u);
-      const y = 0.75 + Math.sin(u * Math.PI) * 1.15;
-      const z = THREE.MathUtils.lerp(0.45, 0.2, u);
-      const d = new THREE.Mesh(dotGeo, dotMat);
-      d.position.set(x, y, z);
-      group.add(d);
-      arcDots.push(d);
+    updateFn = (t, _dt, boost) => {
+      earth.rotation.y = t * 0.28;
+      eros.group.rotation.y = t * 0.45;
+      const u = (t * (0.28 + boost * 0.35)) % 1;
+      probe.group.position.set(
+        THREE.MathUtils.lerp(-1.15, 1.4, u),
+        0.78 + Math.sin(u * Math.PI) * 0.88,
+        0.3,
+      );
+      probe.group.rotation.z = -Math.cos(u * Math.PI) * 0.25;
+      jacob.rightArm.rotation.z = 2.4 + Math.sin(t * 5) * 0.3;
+      lily.rightArm.rotation.z = 2.3 + Math.cos(t * 5) * 0.3;
+      sci.leftArm.rotation.z = -2.3 - Math.sin(t * 5) * 0.28;
+      dots.forEach((d, idx) => {
+        d.scale.setScalar(0.8 + 0.35 * Math.sin(t * 4 - idx * 0.7));
+      });
+    };
+  } else if (sceneId === 'passing-mathilde') {
+    const mathilde = createMathildeAsteroid(maxAnisotropy);
+    mathilde.group.position.set(-1.15, 0.15, 0.35);
+    mathilde.group.rotation.y = 0.25;
+    mathilde.group.scale.setScalar(1.05);
+    disposables.push(mathilde);
+    group.add(mathilde.group);
+
+    const probe = createNearProbe(maxAnisotropy);
+    probe.setMood('happy');
+    probe.group.position.set(1.05, 0.45, 0.35);
+    probe.group.rotation.y = -0.3;
+    probe.group.scale.setScalar(0.95);
+    disposables.push(probe);
+    group.add(probe.group);
+
+    const sign = createMilestoneSign('MATHILDE', '#200838', '#D8B4FE', maxAnisotropy);
+    sign.mesh.position.set(-1.15, 1.78, 0.15);
+    sign.mesh.scale.setScalar(0.75);
+    disposables.push(sign);
+    group.add(sign.mesh);
+
+    const heart = createHeartMesh(0xf472b6, 0.2);
+    heart.position.set(0, 1.5, 0.35);
+    group.add(heart);
+
+    updateFn = (t, _dt, boost) => {
+      mathilde.rightArm.rotation.z = -0.55 + Math.sin(t * 5.5 + boost * 4) * 0.4;
+      mathilde.group.position.y = 0.15 + Math.sin(t * 1.8) * 0.08;
+      probe.leftArm.rotation.z = -2.3 - Math.sin(t * 5.5 + boost * 4) * 0.38;
+      probe.group.position.y = 0.45 + Math.cos(t * 2.0) * 0.1 + boost * 0.18;
+      heart.position.y = 1.5 + Math.sin(t * 2.4) * 0.12;
+      heart.rotation.y = t * 1.6;
+    };
+  } else if (sceneId === 'happily-in-space') {
+    const probe = createNearProbe(maxAnisotropy);
+    probe.setMood('happy');
+    probe.group.position.set(0, 0.55, 0.35);
+    probe.group.scale.setScalar(1.08);
+    disposables.push(probe);
+    group.add(probe.group);
+
+    const stars: THREE.Mesh[] = [];
+    const colors = [0xffe066, 0x80ffdb, 0xd8b4fe, 0x7ce8ff, 0xf472b6];
+    for (let i = 0; i < 5; i++) {
+      const s = createStarMesh(colors[i], 0.16);
+      const ang = (i / 5) * Math.PI * 2;
+      s.position.set(Math.cos(ang) * 1.55, 0.95 + Math.sin(i) * 0.3, Math.sin(ang) * 0.7);
+      group.add(s);
+      stars.push(s);
     }
 
     updateFn = (t, _dt, boost) => {
-      earth.rotation.y = t * 0.35;
-      eros.rotation.y = t * 0.4;
-      const speed = 0.42 + boost * 0.9;
-      const u = (Math.sin(t * speed) + 1) * 0.5;
-      near.group.position.set(
-        THREE.MathUtils.lerp(-1.25, 1.35, u),
-        0.9 + Math.sin(u * Math.PI) * 1.05,
-        0.4,
-      );
-      near.group.rotation.z = -0.25 * Math.cos(t * speed);
-      sci.leftArm.rotation.z = -0.5 + Math.sin(t * 3) * 0.25;
-      arcDots.forEach((d, idx) => {
-        const s = 0.8 + 0.45 * Math.sin(t * 4 - idx * 0.6);
-        d.scale.setScalar(s);
+      probe.group.position.y = 0.55 + Math.sin(t * 2.2) * 0.18 + boost * 0.25;
+      probe.group.rotation.z = Math.sin(t * 1.5) * 0.14;
+      probe.group.rotation.y = Math.sin(t * 0.9) * 0.35 + boost * 1.2;
+      probe.rightArm.rotation.z = 2.4 + Math.sin(t * 4.5) * 0.3;
+      probe.leftArm.rotation.z = -2.4 - Math.sin(t * 4.5) * 0.3;
+      stars.forEach((s, idx) => {
+        s.rotation.y = t * (1.5 + idx * 0.25);
+        s.position.y += Math.sin(t * 2.5 + idx) * 0.002;
       });
     };
-  } else if (sceneId === 'blast-off') {
+  } else if (sceneId === 'missed-the-stop') {
+    // Near shocked & crying in the middle of nowhere, past the Eros stop!
+    const probe = createNearProbe(maxAnisotropy);
+    probe.setMood('crying');
+    probe.group.position.set(0.45, 0.35, 0.45);
+    probe.group.rotation.y = -0.25;
+    probe.group.scale.setScalar(1.05);
+    disposables.push(probe);
+    group.add(probe.group);
+
+    // Passed "EROS STOP" signpost far behind to the left
+    const post = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.04, 0.04, 1.15, 8),
+      new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.5 }),
+    );
+    post.position.set(-1.55, 0.58, -0.15);
+    group.add(post);
+
+    const stopSign = createMilestoneSign('EROS STOP', '#4C0519', '#FFE066', maxAnisotropy);
+    stopSign.mesh.position.set(-1.55, 1.25, -0.15);
+    stopSign.mesh.rotation.y = 0.25;
+    stopSign.mesh.scale.setScalar(0.82);
+    disposables.push(stopSign);
+    group.add(stopSign.mesh);
+
+    const lostSign = createMilestoneSign('NO SIGNAL!', '#7F1D1D', '#FFFFFF', maxAnisotropy);
+    lostSign.mesh.position.set(0.45, 1.75, 0.15);
+    lostSign.mesh.scale.setScalar(0.85);
+    disposables.push(lostSign);
+    group.add(lostSign.mesh);
+
+    // Floating teardrops
+    const dropMat = new THREE.MeshPhysicalMaterial({
+      color: 0x60a5fa,
+      emissive: 0x2563eb,
+      emissiveIntensity: 0.35,
+      roughness: 0.1,
+    });
+    const tearL = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 10), dropMat);
+    const tearR = tearL.clone();
+    group.add(tearL, tearR);
+
+    updateFn = (t, _dt, boost) => {
+      // Alternate shocked & crying on tap or gently float with tears
+      probe.setMood(boost > 0.25 || Math.floor(t * 0.6) % 2 === 1 ? 'shocked' : 'crying');
+      probe.group.position.y = 0.35 + Math.sin(t * 1.8) * 0.08;
+      probe.group.rotation.z = Math.sin(t * 4) * 0.05;
+      const fall = (t * 1.5) % 1;
+      tearL.position.set(0.28, 0.72 - fall * 0.45, 0.85);
+      tearR.position.set(0.58, 0.72 - ((fall + 0.4) % 1) * 0.45, 0.85);
+      lostSign.mesh.position.y = 1.75 + Math.sin(t * 3) * 0.07;
+    };
+  } else if (sceneId === 'back-on-track') {
     const earth = createEarth(maxAnisotropy);
-    earth.position.set(-1.95, 0, 0.35);
-    earth.scale.setScalar(0.92);
+    earth.position.set(-1.85, 0.15, 0.2);
+    earth.scale.setScalar(0.75);
     group.add(earth);
 
-    const sci1 = createScientist(0x3b2314, 0x38bdf8, 'none');
-    sci1.group.position.set(-2.55, 0, 1.45);
-    sci1.group.rotation.y = 0.35;
-    const sci2 = createScientist(0x9a3412, 0xf472b6, 'none');
-    sci2.group.position.set(-1.25, 0, 1.45);
-    sci2.group.rotation.y = -0.25;
-    group.add(sci1.group, sci2.group);
+    const dish = createRadioDish();
+    dish.position.set(-1.1, 0.05, 0.75);
+    dish.rotation.y = 0.85;
+    group.add(dish);
 
-    near.setMood('happy');
-    near.thrusterFlames.visible = true;
-    near.group.scale.setScalar(0.88);
-    near.group.position.set(1.25, 1.25, 0.25);
-    near.group.rotation.z = -0.28;
-    group.add(near.group);
+    const sci = createScientist(0x3b2314, 0x10b981, 'tablet');
+    sci.group.position.set(-1.7, 0, 1.25);
+    sci.group.rotation.y = 0.55;
+    group.add(sci.group);
 
-    // Smoke puff rings rising below NEAR
+    const probe = createNearProbe(maxAnisotropy);
+    probe.setMood('happy');
+    probe.group.position.set(0.75, 0.45, 0.35);
+    probe.group.rotation.y = 0.25;
+    probe.group.scale.setScalar(0.95);
+    disposables.push(probe);
+    group.add(probe.group);
+
+    const eros = createErosAsteroid(maxAnisotropy);
+    eros.group.position.set(2.05, 0.85, 0.05);
+    eros.group.scale.setScalar(0.55);
+    disposables.push(eros);
+    group.add(eros.group);
+
+    // Glowing cyan/emerald guide signal rings
     const rings: THREE.Mesh[] = [];
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 3; i++) {
       const r = new THREE.Mesh(
-        new THREE.TorusGeometry(0.22, 0.05, 8, 20),
-        new THREE.MeshBasicMaterial({ color: 0xe2e8f0, transparent: true, opacity: 0.65 }),
+        new THREE.TorusGeometry(0.18, 0.028, 8, 20),
+        new THREE.MeshBasicMaterial({ color: 0x80ffdb, transparent: true, opacity: 0.85 }),
       );
-      r.rotation.x = Math.PI / 2;
+      r.rotation.y = Math.PI / 2;
       group.add(r);
       rings.push(r);
     }
 
     updateFn = (t, _dt, boost) => {
-      earth.rotation.y = t * 0.3;
-      sci1.rightArm.rotation.z = 2.4 + Math.sin(t * 7) * 0.4;
-      sci2.leftArm.rotation.z = -2.4 - Math.sin(t * 7 + 0.4) * 0.4;
-
-      near.group.position.y = 1.25 + Math.sin(t * 2.5) * 0.14 + boost * 0.65;
-      near.group.position.x = 1.25 + boost * 0.25;
-      const flamePulse = 0.9 + Math.sin(t * 26) * 0.2 + boost * 0.7;
-      near.thrusterFlames.scale.set(1, flamePulse, 1);
+      earth.rotation.y = t * 0.25;
+      eros.group.rotation.y = t * 0.4;
+      probe.group.position.y = 0.45 + Math.abs(Math.sin(t * 2.8)) * 0.12 + boost * 0.2;
+      probe.rightArm.rotation.z = 2.4 + Math.sin(t * 5) * 0.35;
+      sci.leftArm.rotation.z = -2.2 - Math.sin(t * 5) * 0.25;
 
       rings.forEach((r, idx) => {
-        const phase = (t * 1.4 + idx * 0.25) % 1;
-        r.position.set(1.12 - phase * 0.35, 1.05 - phase * 0.85, 0.25);
-        r.scale.setScalar(0.6 + phase * 1.4);
-        (r.material as THREE.MeshBasicMaterial).opacity = (1 - phase) * 0.6;
-      });
-    };
-  } else if (sceneId === 'mathilde') {
-    near.setMood('happy');
-    near.group.position.set(-1.55, 0.85, 0.35);
-    near.group.scale.setScalar(0.85);
-    group.add(near.group);
-
-    const mathilde = createAsteroid({ kind: 'mathilde', scale: 1.18, maxAnisotropy });
-    mathilde.position.set(1.65, 0.3, 0.3);
-    mathilde.rotation.y = -0.35;
-    group.add(mathilde);
-
-    const waveArm = mathilde.getObjectByName('mathildeWaveArm');
-
-    updateFn = (t, _dt, boost) => {
-      near.group.position.y = 0.85 + Math.sin(t * 2) * 0.14 + boost * 0.25;
-      near.group.rotation.z = -0.15 + Math.sin(t * 4.5) * 0.12;
-      near.wings[0].rotation.z = Math.sin(t * 5.5) * 0.25;
-      mathilde.position.y = 0.3 + Math.cos(t * 1.6) * 0.08;
-      if (waveArm) {
-        waveArm.rotation.z = Math.sin(t * 5.5) * 0.45 + boost * 0.5;
-      }
-    };
-  } else if (sceneId === 'passed-stop') {
-    // Glowing EROS road-sign marker on the far left
-    const signGroup = new THREE.Group();
-    signGroup.position.set(-2.35, 0, 0.55);
-    const pole = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.04, 0.04, 1.2, 10),
-      new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.7, roughness: 0.3 }),
-    );
-    pole.position.y = 0.6;
-    const board = new THREE.Mesh(
-      new THREE.BoxGeometry(0.95, 0.4, 0.06),
-      new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.35 }),
-    );
-    board.position.y = 1.15;
-    const miniEros = createAsteroid({ kind: 'eros', scale: 0.35, maxAnisotropy });
-    miniEros.position.set(0, 1.35, 0);
-    signGroup.add(pole, board, miniEros);
-    group.add(signGroup);
-
-    near.setMood('shocked');
-    near.group.position.set(1.8, 0.9, 0.4);
-    near.group.scale.setScalar(0.92);
-    group.add(near.group);
-
-    const excl1 = createSymbolExclamation(0xffe066);
-    excl1.position.set(2.5, 1.75, 0.4);
-    const excl2 = createSymbolExclamation(0xff8a80);
-    excl2.scale.setScalar(0.75);
-    excl2.position.set(1.1, 1.7, 0.4);
-    group.add(excl1, excl2);
-
-    updateFn = (t, _dt, boost) => {
-      miniEros.rotation.y = t * 1.2;
-      near.group.position.y = 0.9 + Math.sin(t * 3.5) * 0.1;
-      near.group.rotation.y = Math.sin(t * 2.8) * 0.45 + boost * Math.PI * 2;
-      near.group.rotation.z = Math.sin(t * 5) * 0.12;
-      excl1.position.y = 1.75 + Math.abs(Math.sin(t * 5)) * 0.2;
-      excl2.position.y = 1.7 + Math.abs(Math.cos(t * 5)) * 0.18;
-    };
-  } else if (sceneId === 'lost-connection') {
-    const dish = createRadioDish();
-    dish.position.set(-2.15, 0, 0.75);
-    dish.rotation.y = 0.65;
-    group.add(dish);
-
-    // Broken red signal arcs that fizzle out
-    const signalRings: THREE.Mesh[] = [];
-    for (let i = 0; i < 3; i++) {
-      const arc = new THREE.Mesh(
-        new THREE.TorusGeometry(0.24 + i * 0.14, 0.025, 8, 20, Math.PI * 0.75),
-        new THREE.MeshBasicMaterial({ color: 0xff6b6b, transparent: true, opacity: 0.7 }),
-      );
-      arc.rotation.z = -Math.PI * 0.35;
-      group.add(arc);
-      signalRings.push(arc);
-    }
-
-    near.setMood('crying');
-    near.group.position.set(1.55, 0.75, 0.35);
-    near.group.scale.setScalar(0.95);
-    near.dishGroup.rotation.x = 0.22; // Drooping dish
-    group.add(near.group);
-
-    // Animated falling 3D blue teardrops!
-    const tears: THREE.Mesh[] = [];
-    const tearMat = new THREE.MeshStandardMaterial({
-      color: 0x38bdf8,
-      emissive: 0x0284c7,
-      emissiveIntensity: 0.4,
-      roughness: 0.15,
-    });
-    for (let i = 0; i < 4; i++) {
-      const tear = new THREE.Mesh(new THREE.SphereGeometry(0.065, 10, 10), tearMat);
-      tear.scale.set(0.85, 1.35, 0.85);
-      group.add(tear);
-      tears.push(tear);
-    }
-
-    updateFn = (t, _dt, boost) => {
-      near.group.position.y = 0.75 + Math.sin(t * 1.5) * 0.06;
-      near.group.rotation.z = Math.sin(t * 1.8) * 0.06;
-
-      signalRings.forEach((ring, idx) => {
-        const p = (t * (0.9 + boost) + idx * 0.33) % 1;
-        ring.position.set(-1.8 + p * 1.65, 0.72 + p * 0.3, 0.65);
-        ring.scale.setScalar(0.7 + p * 0.9);
-        (ring.material as THREE.MeshBasicMaterial).opacity = Math.max(0, 1 - p * 1.25);
-      });
-
-      tears.forEach((tear, idx) => {
-        const p = (t * 1.15 + idx * 0.25) % 1;
-        const side = idx % 2 === 0 ? -0.18 : 0.18;
-        tear.position.set(1.55 + side, 1.05 - p * 0.8, 0.82);
-        tear.visible = p < 0.85;
-      });
-    };
-  } else if (sceneId === 'back-on-track') {
-    const dish = createRadioDish();
-    dish.position.set(-2.15, 0, 0.7);
-    dish.rotation.y = 0.65;
-    group.add(dish);
-
-    // Bright green/cyan restored signal pulses traveling all the way to NEAR
-    const waveRings: THREE.Mesh[] = [];
-    for (let i = 0; i < 4; i++) {
-      const ring = new THREE.Mesh(
-        new THREE.TorusGeometry(0.24, 0.032, 10, 24),
-        new THREE.MeshBasicMaterial({ color: 0x34d399, transparent: true, opacity: 0.9 }),
-      );
-      ring.rotation.y = Math.PI / 2;
-      group.add(ring);
-      waveRings.push(ring);
-    }
-
-    near.setMood('happy');
-    near.group.position.set(1.45, 0.85, 0.35);
-    near.group.scale.setScalar(0.95);
-    group.add(near.group);
-
-    const stars = [
-      createStarMesh(0xffe066, 0.15),
-      createStarMesh(0x34d399, 0.13),
-      createStarMesh(0x7ce8ff, 0.14),
-    ];
-    stars.forEach((s) => group.add(s));
-
-    updateFn = (t, _dt, boost) => {
-      near.group.position.y = 0.85 + Math.abs(Math.sin(t * 3.8)) * 0.28 + boost * 0.3;
-      near.group.rotation.y = Math.sin(t * 2) * 0.35 + boost * Math.PI * 2;
-      near.dishGroup.rotation.y = t * 2.5;
-
-      waveRings.forEach((r, idx) => {
-        const p = (t * 1.2 + idx * 0.25) % 1;
-        r.position.set(THREE.MathUtils.lerp(-1.8, 1.2, p), 0.72 + Math.sin(p * Math.PI) * 0.4, 0.55);
-        r.scale.setScalar(0.8 + Math.sin(p * Math.PI) * 0.6);
-        (r.material as THREE.MeshBasicMaterial).opacity = 0.9 - p * 0.4;
-      });
-
-      stars.forEach((s, idx) => {
-        const a = t * 1.8 + (idx * Math.PI * 2) / 3;
-        s.position.set(1.45 + Math.cos(a) * 1.05, 1.35 + Math.sin(t * 3 + idx) * 0.2, 0.35 + Math.sin(a) * 0.6);
-        s.rotation.y = t * 2.2;
+        const p = (t * (0.9 + boost * 0.6) + idx * 0.33) % 1;
+        r.position.set(
+          THREE.MathUtils.lerp(-0.9, 0.65, p),
+          0.65 + Math.sin(p * Math.PI) * 0.3,
+          0.45,
+        );
+        r.scale.setScalar(0.7 + Math.sin(p * Math.PI) * 0.55);
+        (r.material as THREE.MeshBasicMaterial).opacity = 0.95 - p * 0.5;
       });
     };
   } else if (sceneId === 'orbiting-eros') {
-    const eros = createAsteroid({ kind: 'eros', scale: 1.22, maxAnisotropy });
-    eros.position.set(0.35, 0.25, 0.25);
-    group.add(eros);
+    const eros = createErosAsteroid(maxAnisotropy);
+    eros.group.position.set(0, 0.8, 0.15);
+    eros.group.scale.setScalar(0.95);
+    disposables.push(eros);
+    group.add(eros.group);
 
-    near.setMood('happy');
-    near.cameraProp.visible = true;
-    near.group.scale.setScalar(0.76);
-    group.add(near.group);
+    const orbitRing = new THREE.Mesh(
+      new THREE.TorusGeometry(1.65, 0.018, 8, 48),
+      new THREE.MeshBasicMaterial({ color: 0xd8b4fe, transparent: true, opacity: 0.4 }),
+    );
+    orbitRing.rotation.x = Math.PI / 2 - 0.15;
+    orbitRing.position.set(0, 0.8, 0.15);
+    group.add(orbitRing);
 
-    const photos = [createPhotoTile(), createPhotoTile()];
-    group.add(photos[0], photos[1]);
-
-    updateFn = (t, _dt, boost) => {
-      eros.rotation.y = t * 0.28;
-      const orbitA = t * 0.95 + boost * 2.0;
-      near.group.position.set(
-        0.35 + Math.cos(orbitA) * 1.85,
-        0.95 + Math.sin(t * 2.4) * 0.14,
-        0.25 + Math.sin(orbitA) * 1.25,
-      );
-      near.group.lookAt(0.35, 0.85, 0.25);
-
-      // Periodic camera flash pulse
-      const flashCycle = (t * 0.8 + boost) % 1;
-      const flashing = flashCycle < 0.14 || boost > 0.25;
-      near.cameraFlashMesh.scale.setScalar(flashing ? 2.8 : 0.7);
-
-      photos.forEach((p, idx) => {
-        const phase = (t * 0.45 + idx * 0.5) % 1;
-        p.position.set(
-          THREE.MathUtils.lerp(0.2, -2.5, phase),
-          1.15 + Math.sin(phase * Math.PI) * 0.55,
-          0.35,
-        );
-        p.rotation.y = Math.sin(t * 2 + idx) * 0.25;
-        p.scale.setScalar(0.85 - phase * 0.3);
-      });
-    };
-  } else if (sceneId === 'unexpected-landing') {
-    const sci = createScientist(0x4a3525, 0xef4444, 'megaphone');
-    sci.group.position.set(-2.1, 0, 0.75);
-    sci.group.rotation.y = 0.65;
-    group.add(sci.group);
-
-    const eros = createAsteroid({ kind: 'eros', scale: 1.32, maxAnisotropy });
-    eros.position.set(1.25, 0.05, 0.25);
-    group.add(eros);
-
-    near.setMood('happy');
-    near.group.scale.setScalar(0.76);
-    near.group.position.set(1.25, 1.32, 0.3);
-    group.add(near.group);
-
-    // Cute landing dust puffs on Eros
-    const puffs: THREE.Mesh[] = [];
-    for (let i = 0; i < 4; i++) {
-      const puff = new THREE.Mesh(
-        new THREE.SphereGeometry(0.11, 10, 10),
-        new THREE.MeshStandardMaterial({ color: 0xe7d3b8, roughness: 0.9, transparent: true, opacity: 0.7 }),
-      );
-      group.add(puff);
-      puffs.push(puff);
-    }
+    const probe = createNearProbe(maxAnisotropy, { withCamera: true });
+    probe.setMood('happy');
+    probe.group.scale.setScalar(0.78);
+    disposables.push(probe);
+    group.add(probe.group);
 
     updateFn = (t, _dt, boost) => {
-      sci.rightArm.rotation.x = -1.2 + Math.sin(t * 5) * 0.15;
-      const bob = Math.abs(Math.sin(t * 1.4)) * 0.35 + boost * 0.45;
-      near.group.position.y = 1.24 + bob;
-      near.group.rotation.z = Math.sin(t * 2.1) * 0.08;
-
-      puffs.forEach((p, idx) => {
-        const a = (idx * Math.PI) / 2 + t * 0.6;
-        const spread = 0.35 + (1 - bob) * 0.3;
-        p.position.set(1.25 + Math.cos(a) * spread, 1.25, 0.3 + Math.sin(a) * spread * 0.6);
-        p.scale.setScalar(0.6 + (1 - Math.min(bob, 0.5)) * 0.8);
-      });
+      eros.group.rotation.y = t * 0.25;
+      const ang = t * (0.95 + boost * 1.1);
+      probe.group.position.set(
+        Math.cos(ang) * 1.65,
+        0.8 + Math.sin(ang) * 0.28,
+        0.15 + Math.sin(ang) * 1.15,
+      );
+      probe.group.lookAt(0, 0.8, 0.15);
+      if (probe.cameraFlash) {
+        const pulse = Math.pow(Math.max(0, Math.sin(t * 5 + boost * 6)), 8);
+        probe.cameraFlash.scale.setScalar(0.6 + pulse * 1.8);
+      }
     };
-  } else if (sceneId === 'nothing-impossible') {
-    const sci1 = createScientist(0x3b2314, 0x38bdf8, 'none');
-    sci1.group.position.set(-2.35, 0, 0.8);
+  } else if (sceneId === 'unexpected-plan') {
+    const earth = createEarth(maxAnisotropy);
+    earth.position.set(-1.8, 0.2, 0.3);
+    earth.scale.setScalar(0.75);
+    group.add(earth);
+
+    const sci = createScientist(0x4a3525, 0x38bdf8, 'none');
+    sci.group.position.set(-1.35, 0, 1.15);
+    sci.group.rotation.y = 0.45;
+    const lily = createLily();
+    lily.group.position.set(-2.0, 0, 1.15);
+    lily.group.rotation.y = 0.55;
+    group.add(sci.group, lily.group);
+
+    const comeBackSign = createMilestoneSign('COME BACK!', '#1E3A8A', '#7CE8FF', maxAnisotropy);
+    comeBackSign.mesh.position.set(-1.6, 1.5, 0.35);
+    comeBackSign.mesh.scale.setScalar(0.8);
+    disposables.push(comeBackSign);
+    group.add(comeBackSign.mesh);
+
+    const eros = createErosAsteroid(maxAnisotropy);
+    eros.group.position.set(1.35, 0.45, 0.2);
+    eros.group.scale.setScalar(0.85);
+    disposables.push(eros);
+    group.add(eros.group);
+
+    const probe = createNearProbe(maxAnisotropy);
+    probe.setMood('normal');
+    probe.group.position.set(1.25, 1.15, 0.4);
+    probe.group.scale.setScalar(0.82);
+    disposables.push(probe);
+    group.add(probe.group);
+
+    const ideaBulb = createLightbulbIdea();
+    ideaBulb.position.set(1.25, 2.05, 0.4);
+    group.add(ideaBulb);
+
+    updateFn = (t, _dt, boost) => {
+      earth.rotation.y = t * 0.25;
+      eros.group.rotation.y = t * 0.22;
+      sci.rightArm.rotation.z = 2.4 + Math.sin(t * 4) * 0.3;
+      lily.rightArm.rotation.z = 2.3 + Math.cos(t * 4) * 0.3;
+      probe.group.position.y = 1.15 + Math.sin(t * 2.2) * 0.08 - boost * 0.22;
+      ideaBulb.position.y = 2.05 + Math.sin(t * 3.5) * 0.1;
+      ideaBulb.scale.setScalar(0.95 + Math.sin(t * 6) * 0.12 + boost * 0.35);
+    };
+  } else if (sceneId === 'landed-on-eros') {
+    const ground = createErosGround(maxAnisotropy);
+    disposables.push(ground);
+    group.add(ground.group);
+
+    // Near landed squarely on Eros's rocky surface without landing gear!
+    const probe = createNearProbe(maxAnisotropy);
+    probe.setMood('happy');
+    probe.group.position.set(0.75, 0.14, 0.35);
+    probe.group.rotation.y = -0.3;
+    probe.group.scale.setScalar(1.0);
+    disposables.push(probe);
+    group.add(probe.group);
+
+    // Shocked scientists looking on with "BUT HOW?!" sign
+    const sci1 = createScientist(0x3b2314, 0xf59e0b, 'none');
+    sci1.group.position.set(-1.35, 0.1, 0.75);
     sci1.group.rotation.y = 0.45;
-    const sci2 = createScientist(0x9a3412, 0xf59e0b, 'none');
-    sci2.group.position.set(-1.35, 0, 0.95);
+    const sci2 = createScientist(0x9a3412, 0x38bdf8, 'none');
+    sci2.group.position.set(-0.65, 0.1, 0.9);
     sci2.group.rotation.y = 0.35;
     group.add(sci1.group, sci2.group);
 
-    const qMark = createSymbolQuestion(0xff8a80);
-    qMark.position.set(-2.1, 1.2, 0.8);
-    const eMark = createSymbolExclamation(0xffe066);
-    eMark.position.set(-1.2, 1.25, 0.95);
-    group.add(qMark, eMark);
-
-    const eros = createAsteroid({ kind: 'eros', scale: 1.32, maxAnisotropy });
-    eros.position.set(1.45, 0.05, 0.25);
-    group.add(eros);
-
-    near.setMood('smug');
-    near.sunglasses.visible = true;
-    near.group.scale.setScalar(0.84);
-    near.group.position.set(1.45, 1.25, 0.32);
-    group.add(near.group);
-
-    const stars = [createStarMesh(0xffe066, 0.16), createStarMesh(0x7ce8ff, 0.14)];
-    group.add(stars[0], stars[1]);
+    const howSign = createMilestoneSign('BUT HOW?!', '#4C0519', '#FFE066', maxAnisotropy);
+    howSign.mesh.position.set(-1.0, 1.55, 0.45);
+    howSign.mesh.scale.setScalar(0.88);
+    disposables.push(howSign);
+    group.add(howSign.mesh);
 
     updateFn = (t, _dt, boost) => {
-      // Shocked scientists throw both arms up!
-      sci1.leftArm.rotation.z = -2.6 + Math.sin(t * 7) * 0.15;
-      sci1.rightArm.rotation.z = 2.6 - Math.sin(t * 7) * 0.15;
-      sci2.leftArm.rotation.z = -2.5 - Math.cos(t * 7) * 0.15;
-      sci2.rightArm.rotation.z = 2.5 + Math.cos(t * 7) * 0.15;
-      qMark.position.y = 1.22 + Math.sin(t * 4) * 0.1;
-      eMark.position.y = 1.25 + Math.cos(t * 4) * 0.1;
+      probe.group.position.y = 0.14 + boost * 0.25;
+      probe.group.rotation.z = boost * Math.sin(t * 14) * 0.08;
+      sci1.leftArm.rotation.z = -2.6 + Math.sin(t * 5) * 0.2;
+      sci1.rightArm.rotation.z = 2.6 - Math.sin(t * 5) * 0.2;
+      sci2.leftArm.rotation.z = -2.5 + Math.cos(t * 5) * 0.2;
+      sci2.rightArm.rotation.z = 2.5 - Math.cos(t * 5) * 0.2;
+      howSign.mesh.position.y = 1.55 + Math.sin(t * 3) * 0.08;
+    };
+  } else if (sceneId === 'nothing-impossible') {
+    const ground = createErosGround(maxAnisotropy);
+    disposables.push(ground);
+    group.add(ground.group);
 
-      near.group.position.y = 1.25 + boost * 0.35;
-      near.group.rotation.y = -0.2 + Math.sin(t * 1.5) * 0.18 + boost * Math.PI * 2;
-      stars[0].position.set(0.55, 1.9 + Math.sin(t * 2.5) * 0.15, 0.3);
-      stars[1].position.set(2.35, 1.85 + Math.cos(t * 2.5) * 0.15, 0.3);
-      stars[0].rotation.y = t * 2;
-      stars[1].rotation.y = -t * 2;
+    const probe = createNearProbe(maxAnisotropy);
+    probe.setMood('smug');
+    probe.group.position.set(0, 0.14, 0.35);
+    probe.group.scale.setScalar(1.16);
+    disposables.push(probe);
+    group.add(probe.group);
+
+    const sign = createMilestoneSign('IMPOSSIBLE? NOPE!', '#200838', '#FFE066', maxAnisotropy);
+    sign.mesh.position.set(0, 1.85, -0.35);
+    disposables.push(sign);
+    group.add(sign.mesh);
+
+    const stars = [
+      createStarMesh(0xffe066, 0.16),
+      createStarMesh(0x80ffdb, 0.15),
+      createStarMesh(0xd8b4fe, 0.14),
+    ];
+    stars[0].position.set(-1.3, 1.35, 0.3);
+    stars[1].position.set(1.3, 1.35, 0.3);
+    stars[2].position.set(0, 2.25, -0.15);
+    group.add(stars[0], stars[1], stars[2]);
+
+    updateFn = (t, _dt, boost) => {
+      probe.group.rotation.y = Math.sin(t * 1.1) * 0.22;
+      probe.group.position.y = 0.14 + boost * 0.22;
+      probe.rightArm.rotation.z = 2.1 + Math.sin(t * 3) * 0.15;
+      sign.mesh.position.y = 1.85 + Math.cos(t * 2) * 0.06;
+      stars.forEach((s, idx) => {
+        s.rotation.y = t * (1.8 + idx * 0.4);
+      });
     };
   } else if (sceneId === 'grandpa-eros') {
-    const grandpa = createAsteroid({ kind: 'grandpa-eros', scale: 1.45, maxAnisotropy });
-    grandpa.position.set(0.15, 0.08, 0.35);
-    group.add(grandpa);
+    // Grandpa version of Asteroid Eros + Near taking a respectful photo!
+    const grandpaEros = createErosAsteroid(maxAnisotropy, { grandpa: true });
+    grandpaEros.group.position.set(0.35, 0.85, 0.2);
+    grandpaEros.group.scale.setScalar(1.12);
+    disposables.push(grandpaEros);
+    group.add(grandpaEros.group);
 
-    const photos = [createPhotoTile(), createPhotoTile(), createPhotoTile()];
-    photos.forEach((p) => group.add(p));
+    const probe = createNearProbe(maxAnisotropy, { withCamera: true });
+    probe.setMood('happy');
+    probe.group.position.set(-1.45, 0.45, 0.65);
+    probe.group.rotation.y = 0.65;
+    probe.group.scale.setScalar(0.78);
+    disposables.push(probe);
+    group.add(probe.group);
 
-    const stars = [createStarMesh(0xffe066, 0.13), createStarMesh(0xffe066, 0.11)];
-    group.add(stars[0], stars[1]);
+    const ageSign = createMilestoneSign('OLD AS UNIVERSE!', '#200838', '#D8B4FE', maxAnisotropy);
+    ageSign.mesh.position.set(0.35, 2.0, -0.3);
+    disposables.push(ageSign);
+    group.add(ageSign.mesh);
 
     updateFn = (t, _dt, boost) => {
-      grandpa.rotation.y = Math.sin(t * 0.9) * 0.18 + boost * 0.4;
-      grandpa.position.y = 0.08 + Math.sin(t * 1.8) * 0.04;
-
-      photos.forEach((p, idx) => {
-        const a = t * 0.65 + (idx * Math.PI * 2) / 3;
-        p.position.set(0.15 + Math.cos(a) * 2.25, 1.15 + Math.sin(t * 2 + idx) * 0.16, 0.35 + Math.sin(a) * 0.95);
-        p.rotation.y = -a + Math.PI / 2;
-      });
-      stars[0].position.set(-2.1, 1.6 + Math.sin(t * 2) * 0.15, 0.2);
-      stars[1].position.set(2.3, 1.5 + Math.cos(t * 2) * 0.15, 0.2);
+      grandpaEros.group.position.y = 0.85 + Math.sin(t * 1.4) * 0.08 + boost * 0.14;
+      grandpaEros.group.rotation.y = Math.sin(t * 0.7) * 0.18;
+      probe.group.position.y = 0.45 + Math.cos(t * 1.8) * 0.08;
+      if (probe.cameraFlash) {
+        const pulse = Math.pow(Math.max(0, Math.sin(t * 4 + boost * 6)), 8);
+        probe.cameraFlash.scale.setScalar(0.6 + pulse * 1.7);
+      }
+      ageSign.mesh.position.y = 2.0 + Math.cos(t * 1.8) * 0.05;
     };
   } else if (sceneId === 'never-forgotten') {
-    const sci1 = createScientist(0x4a3525, 0x38bdf8, 'heart');
-    sci1.group.position.set(-2.3, 0, 0.85);
-    sci1.group.rotation.y = 0.45;
-    const lily = createKidCharacter('lily');
-    lily.group.position.set(-1.35, 0, 1.0);
-    lily.group.rotation.y = 0.35;
-    group.add(sci1.group, lily.group);
+    const ground = createErosGround(maxAnisotropy);
+    disposables.push(ground);
+    group.add(ground.group);
 
-    const eros = createAsteroid({ kind: 'eros', scale: 1.32, maxAnisotropy });
-    eros.position.set(1.45, 0.05, 0.25);
-    group.add(eros);
+    // Near resting peacefully on Eros while Astronaut Jacob hugs Near!
+    const probe = createNearProbe(maxAnisotropy);
+    probe.setMood('sleepy');
+    probe.group.position.set(0.72, 0.14, 0.35);
+    probe.group.rotation.y = -0.15;
+    probe.group.scale.setScalar(0.95);
+    disposables.push(probe);
+    group.add(probe.group);
 
-    near.setMood('sleeping');
-    near.group.scale.setScalar(0.8);
-    near.group.position.set(1.45, 1.24, 0.3);
-    group.add(near.group);
+    const astroJacob = createAstronautJacob();
+    astroJacob.group.position.set(0.05, 0.12, 0.45);
+    astroJacob.group.rotation.y = 0.78;
+    // Pose arms reaching out warmly to hug Near!
+    astroJacob.leftArm.rotation.x = -1.15;
+    astroJacob.leftArm.rotation.z = -0.35;
+    astroJacob.rightArm.rotation.x = -1.15;
+    astroJacob.rightArm.rotation.z = 0.35;
+    group.add(astroJacob.group);
 
-    // Floating warm golden thank-you hearts & stars
+    // Lily & Scientist friends appreciating Near with scan monitor & hearts
+    const lily = createLily();
+    lily.group.position.set(-1.35, 0.1, 0.75);
+    lily.group.rotation.y = 0.4;
+    const sci = createScientist(0x4a3525, 0xa855f7, 'tablet');
+    sci.group.position.set(-1.95, 0.1, 0.35);
+    sci.group.rotation.y = 0.55;
+    group.add(lily.group, sci.group);
+
+    const scanMonitor = createScanMonitor(maxAnisotropy);
+    scanMonitor.mesh.position.set(-1.15, 0.14, -0.45);
+    scanMonitor.mesh.rotation.y = 0.25;
+    scanMonitor.mesh.scale.setScalar(0.95);
+    disposables.push(scanMonitor);
+    group.add(scanMonitor.mesh);
+
     const hearts = [
       createHeartMesh(0xf43f5e, 0.24),
-      createHeartMesh(0xfb7185, 0.2),
-      createHeartMesh(0xfbbf24, 0.22),
+      createHeartMesh(0xffe066, 0.2),
+      createHeartMesh(0xd8b4fe, 0.18),
     ];
-    hearts.forEach((h) => group.add(h));
+    const stars = [createStarMesh(0xffe066, 0.15), createStarMesh(0x80ffdb, 0.14)];
+    group.add(hearts[0], hearts[1], hearts[2], stars[0], stars[1]);
 
     updateFn = (t, _dt, boost) => {
-      lily.rightArm.rotation.z = 2.1 + Math.sin(t * 2.5) * 0.2;
+      astroJacob.group.position.y = 0.12 + Math.sin(t * 2.4) * 0.04 + boost * 0.12;
+      probe.group.position.y = 0.14 + Math.sin(t * 2.4) * 0.03 + boost * 0.12;
+      lily.rightArm.rotation.z = 2.3 + Math.sin(t * 4) * 0.28;
+      sci.leftArm.rotation.z = -2.1 - Math.cos(t * 4) * 0.22;
+
+      hearts[0].position.set(0.38, 1.38 + Math.sin(t * 2) * 0.15 + boost * 0.15, 0.42);
+      hearts[1].position.set(-1.45, 1.45 + Math.cos(t * 2.2) * 0.14, 0.45);
+      hearts[2].position.set(1.35, 1.25 + Math.sin(t * 2.6) * 0.14, 0.35);
       hearts.forEach((h, idx) => {
-        const p = (t * (0.35 + boost * 0.4) + idx * 0.33) % 1;
-        h.position.set(-0.6 + idx * 0.7, 0.7 + p * 1.4, 0.45);
-        h.rotation.y = t * 1.5 + idx;
-        h.scale.setScalar(0.24 * Math.sin(p * Math.PI));
+        h.rotation.y = t * (1.3 + idx * 0.2);
       });
-    };
-  } else if (sceneId === 'cosmic-hug') {
-    near.setMood('happy');
-    near.group.position.set(-0.22, 0.45, 0.45);
-    near.group.scale.setScalar(0.95);
-    group.add(near.group);
 
-    // Jacob in full white/cobalt Astronaut Suit hugging NEAR!
-    const jacobAstro = createKidCharacter('jacob-astronaut');
-    jacobAstro.group.position.set(0.45, 0.02, 0.65);
-    jacobAstro.group.rotation.y = -0.95;
-    jacobAstro.group.scale.setScalar(1.15);
-    // Wrap arms forward around NEAR
-    jacobAstro.leftArm.rotation.x = -1.25;
-    jacobAstro.leftArm.rotation.z = 0.35;
-    jacobAstro.rightArm.rotation.x = -1.25;
-    jacobAstro.rightArm.rotation.z = -0.35;
-    group.add(jacobAstro.group);
-
-    const lily = createKidCharacter('lily');
-    lily.group.position.set(-2.05, 0, 0.85);
-    lily.group.rotation.y = 0.45;
-    lily.group.scale.setScalar(1.08);
-    group.add(lily.group);
-
-    const hearts = [
-      createHeartMesh(0xf43f5e, 0.28),
-      createHeartMesh(0xfbbf24, 0.24),
-      createHeartMesh(0xec4899, 0.22),
-      createHeartMesh(0x7ce8ff, 0.22),
-    ];
-    hearts.forEach((h) => group.add(h));
-
-    updateFn = (t, _dt, boost) => {
-      const squeeze = Math.sin(t * 3.5) * 0.06 + boost * 0.14;
-      near.group.position.y = 0.45 + Math.abs(Math.sin(t * 2.5)) * 0.08 + boost * 0.2;
-      jacobAstro.group.position.x = 0.45 - squeeze;
-      lily.leftArm.rotation.z = -2.4 - Math.sin(t * 5) * 0.3;
-      lily.rightArm.rotation.z = 2.4 + Math.sin(t * 5) * 0.3;
-
-      hearts.forEach((h, idx) => {
-        const a = t * 1.1 + (idx * Math.PI) / 2;
-        h.position.set(
-          Math.cos(a) * (1.2 + idx * 0.18),
-          1.35 + Math.sin(t * 2.5 + idx) * 0.25 + boost * 0.4,
-          0.35 + Math.sin(a) * 0.6,
-        );
-        h.rotation.y = t * 1.8;
-      });
+      stars[0].position.set(1.75, 1.65 + Math.sin(t * 2.4) * 0.15, 0.15);
+      stars[1].position.set(-1.95, 1.55 + Math.cos(t * 2.4) * 0.15, 0.2);
+      stars[0].rotation.y = t * 2.0;
+      stars[1].rotation.y = -t * 2.0;
     };
   }
 
