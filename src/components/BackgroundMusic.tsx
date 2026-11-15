@@ -93,7 +93,7 @@ export default function BackgroundMusic() {
         onClick={toggleMusic}
         style={{
           position: "fixed",
-          bottom: "25px",
+          bottom: "110px",
           right: "25px",
           zIndex: 9999,
           background: "#14152e",
