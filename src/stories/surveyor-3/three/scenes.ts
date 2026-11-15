@@ -98,17 +98,17 @@ function createMoonGround(): THREE.Group {
   const surfaceMat = new THREE.MeshStandardMaterial({ color: 0xaaa7a1, roughness: 1 });
   const craterMat = new THREE.MeshStandardMaterial({ color: 0x777671, roughness: 1 });
   const rimMat = new THREE.MeshStandardMaterial({ color: 0xc3c0b9, roughness: 1 });
-  const surface = new THREE.Mesh(new THREE.CylinderGeometry(4.4, 4.65, 0.3, 48), surfaceMat);
+  const surface = new THREE.Mesh(new THREE.CylinderGeometry(2.75, 2.85, 0.3, 48), surfaceMat);
   surface.position.y = -0.15;
   surface.receiveShadow = true;
   ground.add(surface);
 
   for (const [x, z, radius] of [
-    [-2.8, -0.8, 0.42],
-    [2.4, -0.7, 0.52],
-    [-1.6, 1.15, 0.3],
-    [2.9, 1.35, 0.25],
-    [-3.3, 1.6, 0.2],
+    [-1.68, -0.48, 0.42],
+    [1.44, -0.42, 0.52],
+    [-0.96, 0.69, 0.3],
+    [1.74, 0.81, 0.25],
+    [-1.98, 0.96, 0.2],
   ]) {
     const rim = new THREE.Mesh(new THREE.TorusGeometry(radius, 0.055, 8, 24), rimMat);
     rim.rotation.x = -Math.PI / 2;

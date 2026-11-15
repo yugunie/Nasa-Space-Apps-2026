@@ -374,20 +374,14 @@ export default function HomePage() {
   const openArchive = (id: string) => {
     if (openingArchiveId) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      if (id === "near-shoemaker") {
-        window.location.assign("/near-shoemaker.html");
-      } else {
-        setReading(true);
-      }
+      window.location.assign("/" + id + ".html");
       return;
     }
 
     setOpeningArchiveId(id);
     window.setTimeout(() => {
-      if (id === "near-shoemaker") {
-        window.location.assign("/near-shoemaker.html");
-        return;
-      }
+      window.location.assign("/" + id + ".html");
+      return;
 
       setOpeningArchiveId(null);
       setReading(true);
