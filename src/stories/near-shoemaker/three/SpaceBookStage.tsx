@@ -114,8 +114,10 @@ export function SpaceBookStage({
       antialias: !isSoftwareGl,
       powerPreference: 'high-performance',
     });
+    const pixelRatio = isSoftwareGl ? 1 : Math.min(window.devicePixelRatio, 2);
+    const flipPixelRatio = Math.min(pixelRatio, 1.25);
     renderer.setSize(width, height);
-    renderer.setPixelRatio(isSoftwareGl ? 1 : Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(pixelRatio);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.04;
@@ -298,13 +300,123 @@ export function SpaceBookStage({
 
     let activePageIdx = desiredPageRef.current;
     let activeDiorama: ActiveDiorama | null = null;
+    let prefetchedPage: {
+      pageIdx: number;
+      leftTex: THREE.Texture;
+      rightTex: THREE.Texture;
+      popupTex: THREE.Texture;
+      diorama: ActiveDiorama;
+    } | null = null;
+    let prefetchId = 0;
+    let prefetchUsesIdleCallback = false;
+    let disposed = false;
+    let flipQualityReduced = false;
     let flipProgress = 1;
     let flipDirection: 1 | -1 = 1;
     let pendingPageIdx: number | null = null;
     let popupFoldAmount = activePageIdx === 0 ? 0 : 1;
+    let popupShadowFrozen = false;
+
+    const cancelDioramaPrefetch = () => {
+      if (!prefetchId) return;
+      if (prefetchUsesIdleCallback) {
+        window.cancelIdleCallback(prefetchId);
+      } else {
+        window.clearTimeout(prefetchId);
+      }
+      prefetchId = 0;
+    };
+
+    const disposePrefetchedPage = () => {
+      if (!prefetchedPage) return;
+      prefetchedPage.leftTex.dispose();
+      prefetchedPage.rightTex.dispose();
+      prefetchedPage.popupTex.dispose();
+      prefetchedPage.diorama.dispose();
+      prefetchedPage = null;
+    };
+
+    const warmDioramaRenderer = (diorama: ActiveDiorama) => {
+      const warmScene = new THREE.Scene();
+      warmScene.environment = scene.environment;
+      warmScene.fog = scene.fog;
+      warmScene.add(hemiLight.clone());
+      const warmKeyLight = keyLight.clone();
+      if (warmKeyLight.castShadow) {
+        warmKeyLight.shadow.mapSize.set(128, 128);
+      }
+      warmScene.add(warmKeyLight, diorama.group);
+
+      const warmTarget = new THREE.WebGLRenderTarget(16, 16);
+      const previousTarget = renderer.getRenderTarget();
+      const warmCamera = camera.clone();
+      try {
+        renderer.setRenderTarget(warmTarget);
+        renderer.render(warmScene, warmCamera);
+      } finally {
+        renderer.setRenderTarget(previousTarget);
+        warmTarget.dispose();
+        warmKeyLight.shadow.map?.dispose();
+        warmScene.remove(diorama.group);
+      }
+    };
+
+    const prefetchAdjacentDiorama = (pageIdx: number, direction: 1 | -1) => {
+      let nextPageIdx = pageIdx + direction;
+      if (nextPageIdx <= 0 || nextPageIdx >= STORY_PAGES.length) {
+        nextPageIdx = pageIdx - direction;
+      }
+      if (nextPageIdx <= 0 || nextPageIdx >= STORY_PAGES.length) {
+        cancelDioramaPrefetch();
+        disposePrefetchedPage();
+        return;
+      }
+      if (prefetchedPage?.pageIdx === nextPageIdx) return;
+
+      cancelDioramaPrefetch();
+      disposePrefetchedPage();
+
+      const prepare = () => {
+        prefetchId = 0;
+        if (disposed) return;
+        const page = STORY_PAGES[nextPageIdx];
+        if (page) {
+          const diorama = buildStoryDiorama(page.sceneId, maxAnisotropy);
+          const leftTex = createSpreadPageTexture('left', page, maxAnisotropy);
+          const rightTex = createSpreadPageTexture('right', page, maxAnisotropy);
+          const popupTex = createPopupTextTexture(page.popupLines, maxAnisotropy);
+          renderer.initTexture(leftTex);
+          renderer.initTexture(rightTex);
+          renderer.initTexture(popupTex);
+          warmDioramaRenderer(diorama);
+          prefetchedPage = {
+            pageIdx: nextPageIdx,
+            leftTex,
+            rightTex,
+            popupTex,
+            diorama,
+          };
+        }
+      };
+
+      if (typeof window.requestIdleCallback === 'function') {
+        prefetchUsesIdleCallback = true;
+        prefetchId = window.requestIdleCallback(prepare, { timeout: 1500 });
+      } else {
+        prefetchUsesIdleCallback = false;
+        prefetchId = window.setTimeout(prepare, 1500);
+      }
+    };
 
     const applyPageContent = (idx: number) => {
       const page = STORY_PAGES[idx] ?? STORY_PAGES[0];
+      const preparedPage = prefetchedPage?.pageIdx === idx ? prefetchedPage : null;
+      cancelDioramaPrefetch();
+      if (prefetchedPage && !preparedPage) {
+        disposePrefetchedPage();
+      }
+      prefetchedPage = null;
+
       if (activeDiorama) {
         dioramaAnchor.remove(activeDiorama.group);
         activeDiorama.dispose();
@@ -312,15 +424,18 @@ export function SpaceBookStage({
       }
 
       if (idx > 0) {
-        const leftTex = createSpreadPageTexture('left', page, maxAnisotropy);
-        const rightTex = createSpreadPageTexture('right', page, maxAnisotropy);
+        const leftTex =
+          preparedPage?.leftTex ?? createSpreadPageTexture('left', page, maxAnisotropy);
+        const rightTex =
+          preparedPage?.rightTex ?? createSpreadPageTexture('right', page, maxAnisotropy);
         bookRig.setPageTextures(leftTex, rightTex);
 
-        const popupTex = createPopupTextTexture(page.popupLines, maxAnisotropy);
+        const popupTex =
+          preparedPage?.popupTex ?? createPopupTextTexture(page.popupLines, maxAnisotropy);
         bookRig.setPopupTextTexture(popupTex);
         bookRig.popupTextPivot.visible = true;
 
-        activeDiorama = buildStoryDiorama(page.sceneId, maxAnisotropy);
+        activeDiorama = preparedPage?.diorama ?? buildStoryDiorama(page.sceneId, maxAnisotropy);
         dioramaAnchor.add(activeDiorama.group);
       } else {
         bookRig.popupTextPivot.visible = false;
@@ -328,6 +443,7 @@ export function SpaceBookStage({
     };
 
     applyPageContent(activePageIdx);
+    prefetchAdjacentDiorama(activePageIdx, 1);
 
     if (!isSoftwareGl) {
       renderer.compile(scene, camera);
@@ -426,7 +542,6 @@ export function SpaceBookStage({
 
     const clock = new THREE.Clock();
     let frameId = 0;
-    let disposed = false;
 
     function afterDraw(cb: () => void) {
       const gl = renderer.getContext() as WebGL2RenderingContext;
@@ -457,19 +572,23 @@ export function SpaceBookStage({
           applyPageContent(activePageIdx);
           popupFoldAmount = 0;
           camResetActiveRef.current = true;
+          prefetchAdjacentDiorama(activePageIdx, 1);
         } else {
+          cancelDioramaPrefetch();
           pendingPageIdx = desired;
           flipDirection = desired > activePageIdx ? 1 : -1;
-          const currentPage = STORY_PAGES[activePageIdx] ?? STORY_PAGES[0];
           bookRig.setFlippingPageTexture(
-            createSpreadPageTexture(
-              flipDirection === 1 ? 'right' : 'left',
-              currentPage,
-              maxAnisotropy,
-            ),
+            bookRig.getPageTexture(flipDirection === 1 ? 'right' : 'left'),
+            false,
           );
           flipProgress = 0;
           bookRig.flippingPageGroup.visible = true;
+          renderer.shadowMap.autoUpdate = false;
+          popupShadowFrozen = true;
+          if (flipPixelRatio < pixelRatio) {
+            renderer.setPixelRatio(flipPixelRatio);
+            flipQualityReduced = true;
+          }
         }
       }
 
@@ -477,15 +596,14 @@ export function SpaceBookStage({
         flipProgress = Math.min(1, flipProgress + delta * 1.9);
         bookRig.updateFlipCurl(flipProgress, flipDirection);
 
-        if (flipProgress >= 0.48 && activePageIdx !== pendingPageIdx) {
-          activePageIdx = pendingPageIdx;
-          applyPageContent(activePageIdx);
-          popupFoldAmount = 0;
-        }
         if (flipProgress >= 1) {
+          activePageIdx = pendingPageIdx;
           pendingPageIdx = null;
           bookRig.flippingPageGroup.visible = false;
           bookRig.setFlippingPageTexture(null);
+          applyPageContent(activePageIdx);
+          popupFoldAmount = 0;
+          prefetchAdjacentDiorama(activePageIdx, flipDirection);
         }
       }
 
@@ -517,7 +635,23 @@ export function SpaceBookStage({
       floatGroup.rotation.z = Math.sin(elapsed * 0.55) * 0.018;
 
       const targetFold = isClosed || pendingPageIdx !== null ? 0 : 1;
+      if (Math.abs(popupFoldAmount - targetFold) > 0.001) {
+        renderer.shadowMap.autoUpdate = false;
+        popupShadowFrozen = true;
+      }
       popupFoldAmount = THREE.MathUtils.damp(popupFoldAmount, targetFold, 8.5, delta);
+      if (Math.abs(popupFoldAmount - targetFold) <= 0.001) {
+        popupFoldAmount = targetFold;
+        if (popupShadowFrozen) {
+          renderer.shadowMap.autoUpdate = true;
+          renderer.shadowMap.needsUpdate = true;
+          popupShadowFrozen = false;
+        }
+        if (flipQualityReduced) {
+          renderer.setPixelRatio(pixelRatio);
+          flipQualityReduced = false;
+        }
+      }
 
       bookRig.popupTextPivot.rotation.x = THREE.MathUtils.lerp(-Math.PI / 2, 0, popupFoldAmount);
       bookRig.popupTextPivot.scale.setScalar(Math.max(0.001, popupFoldAmount));
@@ -528,7 +662,7 @@ export function SpaceBookStage({
 
       actionBoostRef.current = THREE.MathUtils.damp(actionBoostRef.current, 0, 4.2, delta);
 
-      if (activeDiorama) {
+      if (activeDiorama && popupFoldAmount >= 0.999) {
         activeDiorama.update(elapsed, delta, actionBoostRef.current);
       }
 
@@ -577,6 +711,8 @@ export function SpaceBookStage({
 
     return () => {
       disposed = true;
+      cancelDioramaPrefetch();
+      disposePrefetchedPage();
       cancelAnimationFrame(frameId);
       clearTimeout(frameId);
       window.removeEventListener('resize', onResize);

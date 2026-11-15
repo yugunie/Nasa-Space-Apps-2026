@@ -917,7 +917,8 @@ export interface BookShellRig {
   popupTextPivot: THREE.Group;
   popupTextMesh: THREE.Mesh;
   updateFlipCurl: (progress: number, direction: 1 | -1) => void;
-  setFlippingPageTexture: (texture: THREE.Texture | null) => void;
+  getPageTexture: (side: 'left' | 'right') => THREE.Texture | null;
+  setFlippingPageTexture: (texture: THREE.Texture | null, ownsTexture?: boolean) => void;
   setPageTextures: (leftTex: THREE.Texture, rightTex: THREE.Texture) => void;
   setPopupTextTexture: (tex: THREE.Texture) => void;
 }
@@ -1119,7 +1120,7 @@ export function createBookShell(maxAnisotropy = 4): BookShellRig {
     side: THREE.DoubleSide,
   });
   const flippingPageMesh = new THREE.Mesh(flipGeo, flipMat);
-  flippingPageMesh.castShadow = true;
+  flippingPageMesh.castShadow = false;
   flippingPageGroup.add(flippingPageMesh);
   root.add(flippingPageGroup);
 
@@ -1182,6 +1183,7 @@ export function createBookShell(maxAnisotropy = 4): BookShellRig {
   let prevRightTex: THREE.Texture | null = null;
   let prevPopupTex: THREE.Texture | null = null;
   let prevFlipTex: THREE.Texture | null = null;
+  let prevFlipTexOwned = true;
 
   return {
     root,
@@ -1194,10 +1196,15 @@ export function createBookShell(maxAnisotropy = 4): BookShellRig {
     popupTextPivot,
     popupTextMesh,
     updateFlipCurl,
-    setFlippingPageTexture: (tex) => {
-      if (prevFlipTex === tex) return;
-      if (prevFlipTex) prevFlipTex.dispose();
+    getPageTexture: (side) => (side === 'left' ? prevLeftTex : prevRightTex),
+    setFlippingPageTexture: (tex, ownsTexture = true) => {
+      if (prevFlipTex === tex) {
+        prevFlipTexOwned = ownsTexture;
+        return;
+      }
+      if (prevFlipTex && prevFlipTexOwned) prevFlipTex.dispose();
       prevFlipTex = tex;
+      prevFlipTexOwned = ownsTexture;
       flipMat.map = tex;
       flipMat.needsUpdate = true;
     },
