@@ -1,3 +1,5 @@
+
+import BackgroundMusic from '../../components/BackgroundMusic';
 import { useCallback, useEffect, useState } from 'react';
 import { soundEngine } from './audio/soundEngine';
 import { StoryHUD } from './components/StoryHUD';
@@ -111,6 +113,7 @@ export default function App() {
 
   return (
     <main className="relative w-screen h-screen overflow-hidden bg-[#06091a]">
+      <BackgroundMusic />
       <div
         aria-hidden="true"
         className={`pointer-events-none fixed inset-0 z-[100] bg-black transition-opacity duration-700 ease-out motion-reduce:transition-none ${
