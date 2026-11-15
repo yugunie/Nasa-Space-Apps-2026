@@ -9,7 +9,9 @@ class SoundEngine {
     if (!this.soundEnabled) return null;
     if (typeof window === 'undefined') return null;
     if (!this.ctx) {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (!AudioCtx) return null;
       this.ctx = new AudioCtx();
     }
@@ -24,7 +26,6 @@ class SoundEngine {
     if (!ctx) return;
 
     const now = ctx.currentTime;
-    // Soft paper rustle via filtered noise
     const bufferSize = Math.floor(ctx.sampleRate * 0.24);
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = buffer.getChannelData(0);
@@ -52,7 +53,6 @@ class SoundEngine {
     gain.connect(ctx.destination);
     noise.start(now);
 
-    // Subtle magical pop-up shimmer
     this.playTone(523.25, now + 0.09, 0.14, 'sine', 0.07);
     this.playTone(659.25, now + 0.14, 0.18, 'triangle', 0.07);
   }
@@ -74,56 +74,50 @@ class SoundEngine {
         this.playTone(880, now + 0.08, 0.16, 'sine', 0.09);
         break;
       }
-      case 'boost': {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(110, now);
-        osc.frequency.exponentialRampToValueAtTime(340, now + 0.35);
-
-        const lpf = ctx.createBiquadFilter();
-        lpf.type = 'lowpass';
-        lpf.frequency.setValueAtTime(800, now);
-
-        gain.gain.setValueAtTime(0.001, now);
-        gain.gain.linearRampToValueAtTime(0.1, now + 0.05);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
-
-        osc.connect(lpf);
-        lpf.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.42);
+      case 'launch': {
+        this.playTone(220, now, 0.16, 'triangle', 0.08);
+        this.playTone(330, now + 0.08, 0.18, 'triangle', 0.08);
+        this.playTone(493.88, now + 0.16, 0.22, 'sine', 0.08);
+        break;
+      }
+      case 'wave': {
+        this.playTone(523.25, now, 0.1, 'sine', 0.08);
+        this.playTone(659.25, now + 0.08, 0.12, 'sine', 0.08);
+        this.playTone(783.99, now + 0.16, 0.15, 'triangle', 0.08);
+        break;
+      }
+      case 'worry': {
+        this.playTone(440, now, 0.14, 'triangle', 0.08);
+        this.playTone(349.23, now + 0.14, 0.24, 'triangle', 0.08);
+        break;
+      }
+      case 'signal': {
+        this.playTone(740, now, 0.09, 'sine', 0.07);
+        this.playTone(987.77, now + 0.1, 0.12, 'sine', 0.07);
+        this.playTone(1318.5, now + 0.2, 0.18, 'sine', 0.06);
         break;
       }
       case 'camera': {
-        // Camera shutter click + flash ding
-        this.playTone(1200, now, 0.035, 'square', 0.06);
-        this.playTone(900, now + 0.04, 0.035, 'square', 0.05);
-        this.playTone(1318.5, now + 0.09, 0.2, 'sine', 0.07);
+        this.playTone(1046.5, now, 0.05, 'triangle', 0.09);
+        this.playTone(1480, now + 0.05, 0.07, 'sine', 0.07);
         break;
       }
-      case 'uhoh': {
-        this.playTone(440, now, 0.14, 'triangle', 0.09);
-        this.playTone(311.13, now + 0.13, 0.25, 'triangle', 0.09);
+      case 'surprise': {
+        this.playTone(440, now, 0.09, 'triangle', 0.08);
+        this.playTone(587.33, now + 0.08, 0.1, 'triangle', 0.08);
+        this.playTone(880, now + 0.16, 0.18, 'sine', 0.09);
         break;
       }
-      case 'sad': {
-        this.playTone(392, now, 0.2, 'sine', 0.08);
-        this.playTone(349.23, now + 0.18, 0.22, 'sine', 0.08);
-        this.playTone(293.66, now + 0.36, 0.32, 'sine', 0.07);
+      case 'proud': {
+        this.playTone(523.25, now, 0.1, 'triangle', 0.08);
+        this.playTone(659.25, now + 0.09, 0.1, 'triangle', 0.08);
+        this.playTone(783.99, now + 0.18, 0.2, 'sine', 0.09);
         break;
       }
       case 'fanfare': {
         [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
           this.playTone(freq, now + idx * 0.075, 0.25, 'triangle', 0.1);
         });
-        break;
-      }
-      case 'gentle': {
-        this.playTone(440, now, 0.28, 'sine', 0.06);
-        this.playTone(554.37, now + 0.12, 0.32, 'sine', 0.06);
-        this.playTone(659.25, now + 0.24, 0.4, 'sine', 0.06);
         break;
       }
     }
@@ -164,11 +158,11 @@ class SoundEngine {
     if (!this.readAloudEnabled) return;
 
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.94; // Clear, warm pace for young readers
-    utterance.pitch = 1.08;
+    utterance.rate = 0.94;
+    utterance.pitch = 1.12;
     const voices = window.speechSynthesis.getVoices();
     const preferred =
-      voices.find((v) => /en/i.test(v.lang) && /natural|google|samantha|daniel|karen/i.test(v.name)) ||
+      voices.find((v) => /en/i.test(v.lang) && /samantha|karen|victoria|google|natural/i.test(v.name)) ||
       voices.find((v) => /en/i.test(v.lang));
     if (preferred) utterance.voice = preferred;
     window.speechSynthesis.speak(utterance);
