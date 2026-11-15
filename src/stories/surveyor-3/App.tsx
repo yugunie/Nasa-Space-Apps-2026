@@ -1,3 +1,4 @@
+import { useBackgroundMusic } from '../../components/BackgroundMusic';
 import { useCallback, useEffect, useState } from 'react';
 import { soundEngine } from './audio/soundEngine';
 import { StoryHUD } from './components/StoryHUD';
@@ -6,14 +7,21 @@ import { SpaceBookStage } from './three/SpaceBookStage';
 
 export default function App() {
   const [pageIndex, setPageIndex] = useState(0);
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(
+    () => sessionStorage.getItem('nasaMusicOn') !== 'false',
+  );
   const [readAloudEnabled, setReadAloudEnabled] = useState(false);
   const [dockCollapsed, setDockCollapsed] = useState(false);
   const [actionPulseId, setActionPulseId] = useState(0);
   const [resetViewId, setResetViewId] = useState(0);
   const [isEntering, setIsEntering] = useState(true);
+  const { audioRef: musicAudioRef, setMusicEnabled } = useBackgroundMusic();
 
   const currentPage = STORY_PAGES[pageIndex] ?? STORY_PAGES[0];
+
+  useEffect(() => {
+    soundEngine.soundEnabled = soundEnabled;
+  }, [soundEnabled]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => setIsEntering(false));
@@ -67,12 +75,11 @@ export default function App() {
   }, []);
 
   const handleToggleSound = useCallback(() => {
-    setSoundEnabled((prev) => {
-      const next = !prev;
-      soundEngine.soundEnabled = next;
-      return next;
-    });
-  }, []);
+    const next = !soundEnabled;
+    setSoundEnabled(next);
+    soundEngine.soundEnabled = next;
+    void setMusicEnabled(next);
+  }, [soundEnabled, setMusicEnabled]);
 
   const handleToggleReadAloud = useCallback(() => {
     setReadAloudEnabled((prev) => {
@@ -111,6 +118,7 @@ export default function App() {
 
   return (
     <main className="relative w-screen h-screen overflow-hidden bg-[#06091a]">
+      <audio ref={musicAudioRef} src="/audio/space-music.mp3" loop preload="auto" />
       <div
         aria-hidden="true"
         className={`pointer-events-none fixed inset-0 z-[100] bg-black transition-opacity duration-700 ease-out motion-reduce:transition-none ${

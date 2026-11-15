@@ -8,7 +8,9 @@ import { SpaceBookStage } from './three/SpaceBookStage';
 
 export default function App() {
   const [pageIndex, setPageIndex] = useState(0);
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(
+    () => sessionStorage.getItem('nasaMusicOn') !== 'false',
+  );
   const [readAloudEnabled, setReadAloudEnabled] = useState(false);
   const [dockCollapsed, setDockCollapsed] = useState(false);
   const [actionPulseId, setActionPulseId] = useState(0);
@@ -17,6 +19,10 @@ export default function App() {
   const { audioRef: musicAudioRef, setMusicEnabled } = useBackgroundMusic();
 
   const currentPage = STORY_PAGES[pageIndex] ?? STORY_PAGES[0];
+
+  useEffect(() => {
+    soundEngine.soundEnabled = soundEnabled;
+  }, [soundEnabled]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => setIsEntering(false));
